@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Charlapalli Railway Station — Passenger Display</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-left">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='%23f97316'%3E%3Cpath d='M8 32h32v4H8zm4-20h24l2 12H10zm-2 14h28v2H10z'/%3E%3C/svg%3E" alt="" class="logo" aria-hidden="true">
+      <h1 id="stationName">CHARLAPALLI RAILWAY STATION</h1>
+    </div>
+    <div class="header-right">
+      <div class="clock" id="clock">--:--:--</div>
+      <div class="clock-date" id="clockDate"></div>
+    </div>
+  </header>
+
+  <main class="board">
+    <table class="train-table">
+      <thead>
+        <tr>
+          <th>Train No</th>
+          <th>Train Name</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Arrival</th>
+          <th>Departure</th>
+          <th>PF</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="trainBody">
+        <tr class="loading-row">
+          <td colspan="8">Loading train information…</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+
+  <footer class="footer">
+    <span>Last Updated: <strong id="lastUpdated">—</strong></span>
+    <span>Auto Refresh Every <strong id="refreshInterval">30</strong> Seconds</span>
+    <span class="footer-station">Station Code: <strong id="stationCode">CHZ</strong></span>
+    <span class="refresh-status" id="refreshStatus">● LIVE</span>
+    <span class="refresh-controls">
+      <button type="button" id="btnStart" class="btn-refresh btn-start" title="Start live refresh">▶ Start</button>
+      <button type="button" id="btnStop" class="btn-refresh btn-stop" title="Stop live refresh">■ Stop</button>
+    </span>
+  </footer>
+
+  <script src="/config.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

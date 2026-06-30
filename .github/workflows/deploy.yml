@@ -1,0 +1,40 @@
+name: Deploy Railway PDS
+
+on:
+  workflow_dispatch:
+    inputs:
+      stack_name:
+        description: CloudFormation stack name
+        default: railway-pds-chz
+      aws_region:
+        description: AWS region
+        default: ap-south-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Deploy to AWS
+        env:
+          STACK_NAME: ${{ inputs.stack_name }}
+          AWS_REGION: ${{ inputs.aws_region }}
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/deploy.sh

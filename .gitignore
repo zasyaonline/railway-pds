@@ -1,0 +1,6 @@
+dist/
+lambda/services/
+node_modules/
+data/live_status.json
+.DS_Store
+*.log

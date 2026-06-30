@@ -1,0 +1,17 @@
+{
+  "name": "railway-pds",
+  "version": "1.0.0",
+  "description": "Charlapalli Railway Station Passenger Display System POC",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build:lambda": "bash scripts/build-lambda.sh",
+    "deploy:aws": "bash scripts/deploy.sh"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

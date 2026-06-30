@@ -1,0 +1,24 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ACM certificate for CloudFront (must be in us-east-1)
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: platform.zasya.online
+
+Resources:
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS
+      Tags:
+        - Key: Project
+          Value: railway-pds
+
+Outputs:
+  CertificateArn:
+    Description: ACM certificate ARN (use in main stack)
+    Value: !Ref Certificate
+  DomainName:
+    Value: !Ref DomainName
