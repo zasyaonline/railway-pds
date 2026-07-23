@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDS Admin — Sessions</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+  <header class="header admin-header">
+    <div class="header-left">
+      <h1>PDS Admin</h1>
+    </div>
+    <div class="header-right">
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <section class="admin-gate" id="gate">
+      <label for="adminKey">Admin key</label>
+      <div class="gate-row">
+        <input id="adminKey" type="password" autocomplete="current-password" placeholder="Enter admin key">
+        <button type="button" id="btnUnlock" class="btn-refresh btn-start">Open</button>
+      </div>
+      <p class="gate-hint">Default key is <code>chz-ops</code> unless changed in AWS.</p>
+      <p class="gate-error" id="gateError" hidden></p>
+    </section>
+
+    <section class="admin-panel" id="panel" hidden>
+      <div class="admin-summary">
+        <div class="stat">
+          <span class="stat-label">Active sessions</span>
+          <span class="stat-value" id="activeCount">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Live data</span>
+          <span class="stat-value" id="refreshState">—</span>
+        </div>
+        <div class="admin-actions">
+          <button type="button" id="btnRefreshList" class="btn-refresh btn-start">Refresh list</button>
+          <button type="button" id="btnStopAll" class="btn-refresh btn-stop">Stop all sessions</button>
+          <button type="button" id="btnServiceStart" class="btn-refresh btn-start">Start service</button>
+          <button type="button" id="btnServiceStop" class="btn-refresh btn-stop">Stop service</button>
+        </div>
+      </div>
+
+      <table class="train-table admin-table">
+        <thead>
+          <tr>
+            <th>Session</th>
+            <th>Started</th>
+            <th>Running</th>
+            <th>Last seen</th>
+            <th>Browser</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="sessionBody">
+          <tr class="no-trains"><td colspan="6">No active sessions</td></tr>
+        </tbody>
+      </table>
+
+      <p class="admin-note">
+        A session is a browser tab on the display. Idle tabs drop off after ~90s.
+        Stopping a session blanks that tab; Start/Stop service controls NTES live refresh for everyone.
+      </p>
+      <p><a class="admin-link" href="/">Open display →</a></p>
+    </section>
+  </main>
+
+  <script src="/config.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

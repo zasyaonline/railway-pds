@@ -2,7 +2,12 @@
 
 Passenger Display System (POC) for **Charlapalli station (CHZ)**, showing trains that start, arrive at, or pass through the station using NTES live data.
 
-Live display: `https://platform.zasya.online` (custom domain) / CloudFront distribution URL.
+| Surface | URL |
+|---|---|
+| Live display | https://platform.zasya.online |
+| Admin (sessions) | https://platform.zasya.online/admin.html |
+
+Admin key default: `chz-ops` (override with `ADMIN_KEY` on deploy / Lambda env).
 
 ---
 
@@ -12,14 +17,32 @@ Fully serverless on AWS (region `ap-south-1`, single CloudFormation stack **`rai
 
 | Component | Resource | Purpose |
 |---|---|---|
-| Static site | **S3** `railway-pds-chz-pdsbucket-…` | Hosts the display page (`public/`) + `data/*.json` |
+| Static site | **S3** `railway-pds-chz-pdsbucket-…` | Hosts the display + admin pages (`public/`) and `data/*.json` |
 | CDN + HTTPS | **CloudFront** `EVTX6GW0ROE2O` (alias `platform.zasya.online`) | Serves the site and proxies `/api/*` to the HTTP API |
-| Backend API | **API Gateway (HTTP)** `2j7ifmjjyb` + **Lambda** `railway-pds-CHZ-api` | Routes: `/trains`, `/health`, `/refresh/start|stop|status` |
-| Live data fetch | **Lambda** `railway-pds-CHZ-refresh` | Pulls NTES data, writes `trains.json` to S3 |
+| Backend API | **API Gateway (HTTP)** `2j7ifmjjyb` + **Lambda** `railway-pds-CHZ-api` | Trains, health, refresh controls, viewer sessions |
+| Live data fetch | **Lambda** `railway-pds-CHZ-refresh` | Pulls NTES data, writes live board JSON to S3 |
 | Scheduler | **EventBridge rule** `railway-pds-CHZ-refresh-schedule` | Triggers the refresh Lambda every 1 minute |
 | Certificate | **ACM** (in `us-east-1`) | TLS for the custom domain (CloudFront requires us-east-1) |
 
-The browser display auto-refreshes every 30s (`REFRESH_MS`) by calling the API through CloudFront.
+The browser display auto-refreshes every 30s by calling `/api/trains` through CloudFront. Each open tab registers a **viewer session** so the admin page can list and stop active displays.
+
+---
+
+## Admin panel (viewer sessions)
+
+Open **https://platform.zasya.online/admin.html** and enter the admin key.
+
+| Action | What it does |
+|---|---|
+| Active sessions table | Shows each browser tab: start time, how long it has been running, last seen, browser |
+| **Stop** / **Stop all sessions** | Ends that display tab (board shows stopped + Reconnect) |
+| **Start / Stop service** | Enables or pauses NTES live refresh for everyone |
+
+Notes:
+
+- Idle tabs drop off the list after ~90 seconds without a heartbeat.
+- Session stop returns HTTP **409** (not 403) so CloudFront’s SPA `403 ? index.html` rule does not break Safari.
+- `/api/*` must use an origin request policy that forwards viewer headers/query strings (e.g. `Managed-AllViewerExceptHostHeader`) so `X-Admin-Key` / `sessionId` reach Lambda.
 
 ---
 
@@ -28,9 +51,9 @@ The browser display auto-refreshes every 30s (`REFRESH_MS`) by calling the API t
 ```
 infra/       CloudFormation templates (template.yaml, certificate.yaml)
 lambda/      Lambda source (api + refresh handlers)
-public/      Static display site
-routes/      Express routes (shared local/lambda)
-services/    NTES + data services
+public/      Static display + admin UI
+routes/      Express routes (local server)
+services/    NTES + merge + session services
 scripts/     build-lambda.sh, deploy.sh, ensure-certificate.sh
 server.js    Local Express server for development
 data/        config.json, trains.json
@@ -43,15 +66,21 @@ data/        config.json, trains.json
 ```bash
 npm install
 npm start          # Express server on http://localhost:3000
+# Admin: http://localhost:3000/admin.html  (key: chz-ops or $ADMIN_KEY)
 ```
+
+Node 22+ is preferred (`engines` in `package.json`); Node 20 usually works for local runs.
 
 ---
 
 ## Deploy to AWS
 
-Prerequisites: `aws login` (credentials for account `884000107109`) and DNS access to `zasya.online` (Cloudflare).
+Prerequisites: AWS credentials for account `884000107109` (profile with enough rights to update Lambda/S3/API/CloudFront; full stack updates that touch IAM roles need broader IAM than `PowerUserAccess` alone) and DNS access to `zasya.online` (Cloudflare).
 
 ```bash
+# Optional: override admin key
+ADMIN_KEY='your-secret' ./scripts/deploy.sh
+
 # First deploy (creates ACM cert; add the validation CNAME in Cloudflare when prompted)
 ./scripts/deploy.sh
 
@@ -69,6 +98,8 @@ Proxy  : OFF (DNS only / grey cloud) — required for ACM + CloudFront
 ```
 
 CI: `.github/workflows/deploy.yml` runs the same deploy via `workflow_dispatch`.
+
+If CloudFormation cannot update the Lambda execution role (IAM boundary on the deploy user), update Lambda code, API routes, and S3 static files directly with the AWS CLI instead of a full stack deploy.
 
 ---
 
@@ -150,7 +181,7 @@ Serverless, pay-per-use. At POC traffic levels this stack costs **well under $1/
 
 If the `*.cloudfront.net` URL works but `platform.zasya.online` does not:
 
-1. **CNAME on distribution** — `platform.zasya.online` must be listed under CloudFront ? Settings ? Alternate domain names (CNAMEs). (Already configured.)
+1. **CNAME on distribution** — `platform.zasya.online` must be listed under CloudFront ? Settings ? Alternate domain names (CNAMEs).
 2. **Certificate** — an ACM cert covering `platform.zasya.online`, issued in **us-east-1**, must be attached.
 3. **DNS** — in Cloudflare, `platform` CNAME ? the CloudFront domain, with **proxy OFF (grey cloud)**.
 4. **Propagation** — allow 5–30 min after DNS/cert changes.
@@ -160,4 +191,7 @@ Diagnose:
 ```bash
 dig platform.zasya.online CNAME +short     # should return the cloudfront.net domain
 curl -Iv https://platform.zasya.online      # check TLS handshake / status
+curl -s https://platform.zasya.online/api/health
 ```
+
+If admin shows **Invalid admin key** while the key is correct, confirm the `/api/*` CloudFront behavior forwards viewer headers (origin request policy). Without that, `X-Admin-Key` never reaches Lambda.

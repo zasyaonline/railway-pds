@@ -20,6 +20,11 @@ Parameters:
     Type: String
     Default: ''
     Description: ACM certificate ARN from us-east-1 (required for custom domain)
+  AdminKey:
+    Type: String
+    Default: chz-ops
+    NoEcho: true
+    Description: Shared key for /admin.html session controls
 
 Conditions:
   UseCustomDomain: !Not [!Equals [!Ref CertificateArn, '']]
@@ -126,6 +131,7 @@ Resources:
         Variables:
           BUCKET_NAME: !Ref PdsBucket
           REFRESH_RULE_NAME: !Sub 'railway-pds-${StationCode}-refresh-schedule'
+          ADMIN_KEY: !Ref AdminKey
       Code:
         S3Bucket: !Ref LambdaCodeBucket
         S3Key: !Ref LambdaCodeKey
@@ -205,6 +211,27 @@ Resources:
       RouteKey: POST /api/refresh/stop
       Target: !Sub 'integrations/${ApiIntegration}'
 
+  AdminSessionsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /api/admin/sessions
+      Target: !Sub 'integrations/${ApiIntegration}'
+
+  AdminSessionStopRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /api/admin/sessions/stop
+      Target: !Sub 'integrations/${ApiIntegration}'
+
+  AdminSessionStopAllRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /api/admin/sessions/stop-all
+      Target: !Sub 'integrations/${ApiIntegration}'
+
   ApiStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
@@ -268,6 +295,8 @@ Resources:
             CachedMethods: [GET, HEAD]
             Compress: true
             CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            # Forward viewer headers (X-Admin-Key, X-Session-Id) to API Gateway
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
         CustomErrorResponses:
           - ErrorCode: 403
             ResponseCode: 200

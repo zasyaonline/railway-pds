@@ -8,10 +8,81 @@
 const CONFIG = window.PDS_CONFIG || {};
 const API_BASE = CONFIG.API_BASE || '';
 const REFRESH_MS_DEFAULT = CONFIG.REFRESH_MS || 30_000;
+const SESSION_KEY = 'pds_session_id';
 
 let refreshTimer = null;
 let refreshIntervalMs = REFRESH_MS_DEFAULT;
 let refreshEnabled = true;
+let sessionStopped = false;
+
+function getSessionId() {
+  try {
+    let id = localStorage.getItem(SESSION_KEY);
+    if (!id) {
+      id = (crypto.randomUUID && crypto.randomUUID()) ||
+        `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem(SESSION_KEY, id);
+    }
+    return id;
+  } catch {
+    return `s-${Date.now()}`;
+  }
+}
+
+function clearSessionId() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function showSessionStopped() {
+  sessionStopped = true;
+  refreshEnabled = false;
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+  const statusEl = document.getElementById('refreshStatus');
+  if (statusEl) {
+    statusEl.textContent = '● STOPPED';
+    statusEl.className = 'refresh-status paused';
+  }
+  document.getElementById('trainBody').innerHTML = `
+    <tr class="no-trains">
+      <td colspan="8">
+        This display session was stopped by an administrator.
+        <button type="button" id="btnReconnect" class="btn-refresh btn-start" style="margin-left:1rem">Reconnect</button>
+      </td>
+    </tr>`;
+  const btn = document.getElementById('btnReconnect');
+  if (btn) {
+    btn.addEventListener('click', reconnectSession);
+  }
+}
+
+function newSessionId() {
+  clearSessionId();
+  return getSessionId();
+}
+
+function reconnectSession() {
+  sessionStopped = false;
+  refreshEnabled = true;
+  newSessionId();
+  updateRefreshUI(true);
+  loadTrains();
+}
+
+function trainsUrl() {
+  const sid = encodeURIComponent(getSessionId());
+  return `${API_BASE}/api/trains?sessionId=${sid}`;
+}
+
+function isSessionStoppedPayload(data) {
+  return data && (data.error === 'session_stopped' || data.sessionStopped === true);
+}
 
 // ---------------------------------------------------------------------------
 // Clock
@@ -151,16 +222,45 @@ function updateMeta(data) {
 // ---------------------------------------------------------------------------
 
 async function loadTrains() {
-  try {
-    const res = await fetch(`${API_BASE}/api/trains`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (sessionStopped) return;
 
-    const data = await res.json();
+  try {
+    const res = await fetch(trainsUrl(), {
+      headers: {
+        'X-Session-Id': getSessionId(),
+        'Accept': 'application/json'
+      },
+      cache: 'no-store'
+    });
+
+    const contentType = res.headers.get('content-type') || '';
+    const raw = await res.text();
+    let data = null;
+    if (contentType.includes('application/json') || raw.trim().startsWith('{')) {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        data = null;
+      }
+    }
+
+    // CloudFront SPA rules remap some errors to index.html (200 HTML) — treat as dead session
+    if (!data || isSessionStoppedPayload(data) || res.status === 409 || res.status === 403) {
+      if (isSessionStoppedPayload(data) || res.status === 409 || res.status === 403 || (res.ok && !data)) {
+        clearSessionId();
+        showSessionStopped();
+        return;
+      }
+    }
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!data || !Array.isArray(data.trains)) throw new Error('Invalid trains payload');
+
     renderTable(data.trains);
     updateMeta(data);
   } catch (err) {
     console.error('Failed to load trains:', err);
-    if (refreshEnabled) {
+    if (refreshEnabled && !sessionStopped) {
       document.getElementById('trainBody').innerHTML = `
         <tr class="no-trains">
           <td colspan="8">Unable to load train data. Retrying…</td>
@@ -188,7 +288,16 @@ async function setRefresh(action) {
   btnStop.disabled = true;
 
   try {
-    const res = await fetch(`${API_BASE}/api/refresh/${action}`, { method: 'POST' });
+    // Starting again after an admin stop should mint a fresh session
+    if (action === 'start') {
+      if (sessionStopped) {
+        reconnectSession();
+        return;
+      }
+      newSessionId();
+    }
+
+    const res = await fetch(`${API_BASE}/api/refresh/${action}`, { method: 'POST', cache: 'no-store' });
     const data = await res.json();
     updateRefreshUI(data.refreshEnabled);
     if (data.refreshEnabled) {

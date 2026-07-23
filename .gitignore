@@ -2,5 +2,10 @@ dist/
 lambda/services/
 node_modules/
 data/live_status.json
+data/sessions.json
 .DS_Store
 *.log
+.aws/
+*.pem
+credentials
+credentilas

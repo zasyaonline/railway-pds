@@ -4,12 +4,69 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { buildDisplayList } = require('../services/mergeService');
+const {
+  SESSIONS_KEY,
+  emptyStore,
+  touchSession,
+  listActive,
+  stopSession,
+  stopAll,
+  STALE_MS
+} = require('../services/sessionService');
 
 function createApiRouter(deps) {
   const router = express.Router();
   const { getCache, startRefresh, stopRefresh, saveConfig } = deps;
+  const dataDir = path.join(__dirname, '..', 'data');
+  const sessionsPath = path.join(dataDir, 'sessions.json');
+  const adminKey = process.env.ADMIN_KEY || 'chz-ops';
+
+  function readSessions() {
+    try {
+      return JSON.parse(fs.readFileSync(sessionsPath, 'utf8'));
+    } catch {
+      return emptyStore();
+    }
+  }
+
+  function writeSessions(store) {
+    fs.writeFileSync(sessionsPath, JSON.stringify(store, null, 2));
+  }
+
+  function requireAdmin(req, res) {
+    const provided = req.get('x-admin-key') || req.query.adminKey || req.query.key || '';
+    if (!provided || provided !== adminKey) {
+      res.status(401).json({ error: 'Admin key required' });
+      return false;
+    }
+    return true;
+  }
+
+  function registerViewer(req, res) {
+    const sessionId = req.get('x-session-id') || req.query.sessionId || req.query.sid;
+    if (!sessionId) return true;
+
+    const store = readSessions();
+    const result = touchSession(store, {
+      id: String(sessionId),
+      userAgent: req.get('user-agent') || ''
+    });
+    writeSessions(result.store);
+
+    if (result.killed) {
+      res.set('Cache-Control', 'no-store');
+      res.status(409).json({
+        error: 'session_stopped',
+        message: 'This display session was stopped by an administrator'
+      });
+      return false;
+    }
+    return true;
+  }
 
   router.get('/trains', (req, res) => {
+    if (!registerViewer(req, res)) return;
+
     const cache = getCache();
     if (!cache.boardTrains) {
       return res.status(503).json({ error: 'Data not yet loaded' });
@@ -53,13 +110,51 @@ function createApiRouter(deps) {
 
   router.get('/health', (req, res) => {
     const cache = getCache();
+    const sessions = listActive(readSessions());
     res.json({
       status: 'ok',
       refreshEnabled: cache.config.refreshEnabled !== false,
       boardTrainCount: cache.boardTrains?.length ?? 0,
       displayTrainCount: buildDisplayList(cache.boardTrains || [], cache.config || {}).length,
+      activeSessions: sessions.length,
       lastUpdated: cache.lastUpdated
     });
+  });
+
+  router.get('/admin/sessions', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    const cache = getCache();
+    const sessions = listActive(readSessions());
+    res.json({
+      activeCount: sessions.length,
+      sessions,
+      refreshEnabled: cache.config.refreshEnabled !== false,
+      refreshInterval: cache.config.refreshInterval || 30,
+      staleAfterSeconds: Math.floor(STALE_MS / 1000)
+    });
+  });
+
+  router.post('/admin/sessions/stop', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    const sessionId = req.body?.sessionId || req.body?.id;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId required' });
+    }
+    const store = readSessions();
+    const result = stopSession(store, String(sessionId));
+    writeSessions(result.store);
+    if (!result.found) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    res.json({ stopped: true, sessionId: String(sessionId) });
+  });
+
+  router.post('/admin/sessions/stop-all', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    const store = readSessions();
+    const result = stopAll(store);
+    writeSessions(result.store);
+    res.json({ stopped: result.count, message: `Stopped ${result.count} session(s)` });
   });
 
   return router;

@@ -81,6 +81,7 @@ aws cloudformation deploy \
     StationCode="$STATION" \
     CustomDomainName="$CUSTOM_DOMAIN" \
     CertificateArn="$CERT_ARN" \
+    AdminKey="${ADMIN_KEY:-chz-ops}" \
   --no-fail-on-empty-changeset
 
 BUCKET=$(aws cloudformation describe-stacks \
@@ -157,6 +158,7 @@ echo "============================================"
 echo "  Deployment complete!"
 echo "============================================"
 echo "  Custom domain  : https://${CUSTOM_DOMAIN}"
+echo "  Admin panel    : https://${CUSTOM_DOMAIN}/admin.html"
 echo "  CloudFront     : https://${CF_DOMAIN}"
 echo "  S3 bucket      : ${BUCKET}"
 echo "  Refresh        : every 1 minute"
