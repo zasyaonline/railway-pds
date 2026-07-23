@@ -3,12 +3,27 @@
 const CONFIG = window.PDS_CONFIG || {};
 const API_BASE = CONFIG.API_BASE || '';
 const KEY_STORAGE = 'pds_admin_key';
+const CUSTOM_VALUE = '__custom__';
 
 let adminKey = '';
 let pollTimer = null;
+let stationPresets = [];
+let stationFormDirty = false;
+let stationFormReady = false;
 
 function $(id) {
   return document.getElementById(id);
+}
+
+function isStationFormFocused() {
+  const active = document.activeElement;
+  return active === $('stationCodeInput')
+    || active === $('stationNameInput')
+    || active === $('stationPreset');
+}
+
+function markStationDirty() {
+  stationFormDirty = true;
 }
 
 function updateClock() {
@@ -61,10 +76,81 @@ async function api(path, options = {}) {
   return data;
 }
 
+function fillStationPresets(presets) {
+  const next = presets || [];
+  const same = next.length === stationPresets.length
+    && next.every((s, i) => s.code === stationPresets[i]?.code && s.name === stationPresets[i]?.name);
+  stationPresets = next;
+  if (same && $('stationPreset').options.length > 0) {
+    return;
+  }
+
+  const select = $('stationPreset');
+  const previous = select.value;
+  select.innerHTML = stationPresets
+    .map((s) => `<option value="${s.code}">${s.code} — ${s.name}</option>`)
+    .join('') + `<option value="${CUSTOM_VALUE}">Other / custom code…</option>`;
+  if (previous && [...select.options].some((o) => o.value === previous)) {
+    select.value = previous;
+  }
+}
+
+function syncStationForm(code, name, force) {
+  $('currentStation').textContent = code ? `${code}` : '—';
+  if (name) {
+    $('currentStation').title = name;
+  }
+
+  // Don't clobber what the admin is typing
+  if (!force && (stationFormDirty || isStationFormFocused())) {
+    return;
+  }
+
+  const preset = stationPresets.find((s) => s.code === code);
+  if (preset) {
+    $('stationPreset').value = code;
+    $('stationCodeInput').value = code;
+    $('stationNameInput').value = name || preset.name;
+  } else {
+    $('stationPreset').value = CUSTOM_VALUE;
+    $('stationCodeInput').value = code || '';
+    $('stationNameInput').value = name || '';
+  }
+  stationFormDirty = false;
+  stationFormReady = true;
+}
+
+function onPresetChange() {
+  markStationDirty();
+  const value = $('stationPreset').value;
+  if (value === CUSTOM_VALUE) {
+    $('stationCodeInput').focus();
+    return;
+  }
+  const preset = stationPresets.find((s) => s.code === value);
+  if (!preset) return;
+  $('stationCodeInput').value = preset.code;
+  $('stationNameInput').value = preset.name;
+}
+
+function setStationStatus(message, isError) {
+  const el = $('stationStatus');
+  el.hidden = !message;
+  el.textContent = message || '';
+  el.className = `station-status${isError ? ' error' : ''}`;
+}
+
 function renderSessions(data) {
   $('activeCount').textContent = String(data.activeCount ?? 0);
   $('refreshState').textContent = data.refreshEnabled ? 'LIVE' : 'PAUSED';
   $('refreshState').className = `stat-value ${data.refreshEnabled ? 'live' : 'paused'}`;
+
+  if (Array.isArray(data.stationPresets) && data.stationPresets.length) {
+    fillStationPresets(data.stationPresets);
+  }
+  if (data.stationCode) {
+    syncStationForm(data.stationCode, data.stationName, !stationFormReady);
+  }
 
   const tbody = $('sessionBody');
   const sessions = data.sessions || [];
@@ -106,6 +192,28 @@ async function loadSessions() {
   renderSessions(data);
 }
 
+async function applyStation() {
+  const stationCode = $('stationCodeInput').value.trim();
+  const stationName = $('stationNameInput').value.trim();
+  const btn = $('btnApplyStation');
+  btn.disabled = true;
+  setStationStatus('Updating station…');
+  try {
+    const result = await api('/api/admin/station', {
+      method: 'POST',
+      body: JSON.stringify({ stationCode, stationName })
+    });
+    setStationStatus(result.message || 'Station updated');
+    stationFormDirty = false;
+    await loadSessions();
+    syncStationForm(result.stationCode, result.stationName, true);
+  } catch (err) {
+    setStationStatus(err.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 async function unlock() {
   adminKey = $('adminKey').value.trim();
   $('gateError').hidden = true;
@@ -131,6 +239,27 @@ async function unlock() {
 $('btnUnlock').addEventListener('click', unlock);
 $('adminKey').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') unlock();
+});
+
+$('stationPreset').addEventListener('change', onPresetChange);
+$('btnApplyStation').addEventListener('click', applyStation);
+['stationCodeInput', 'stationNameInput'].forEach((id) => {
+  $(id).addEventListener('input', markStationDirty);
+  $(id).addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      applyStation();
+    }
+  });
+});
+$('stationCodeInput').addEventListener('input', () => {
+  $('stationCodeInput').value = $('stationCodeInput').value.toUpperCase();
+  const code = $('stationCodeInput').value.trim();
+  const preset = stationPresets.find((s) => s.code === code);
+  $('stationPreset').value = preset ? code : CUSTOM_VALUE;
+  if (preset && !$('stationNameInput').value.trim()) {
+    $('stationNameInput').value = preset.name;
+  }
 });
 
 $('btnRefreshList').addEventListener('click', () => loadSessions().catch((e) => alert(e.message)));

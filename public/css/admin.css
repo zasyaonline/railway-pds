@@ -108,6 +108,80 @@
   max-width: 52rem;
 }
 
+.station-stat {
+  font-size: 1.15rem !important;
+  letter-spacing: 0.04em;
+}
+
+.station-card {
+  background: #0d2240;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  padding: 1rem 1.25rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.station-card h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.35rem;
+  color: #fff;
+}
+
+.station-help {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin-bottom: 0.9rem;
+}
+
+.station-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.station-row label {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  min-width: 3.5rem;
+}
+
+.station-row select,
+.station-row input {
+  background: #0a1628;
+  border: 1px solid #334155;
+  color: #e8edf5;
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.station-row select {
+  min-width: 16rem;
+}
+
+#stationCodeInput {
+  width: 6.5rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+#stationNameInput {
+  min-width: 14rem;
+  flex: 1;
+}
+
+.station-status {
+  color: #4ade80;
+  font-size: 0.9rem;
+}
+
+.station-status.error {
+  color: #f87171;
+}
+
 .admin-link {
   color: #f97316;
   text-decoration: none;

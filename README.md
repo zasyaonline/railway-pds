@@ -17,18 +17,18 @@ Fully serverless on AWS (region `ap-south-1`, single CloudFormation stack **`rai
 
 | Component | Resource | Purpose |
 |---|---|---|
-| Static site | **S3** `railway-pds-chz-pdsbucket-…` | Hosts the display + admin pages (`public/`) and `data/*.json` |
+| Static site | **S3** `railway-pds-chz-pdsbucket-...` | Hosts the display + admin pages (`public/`) and `data/*.json` |
 | CDN + HTTPS | **CloudFront** `EVTX6GW0ROE2O` (alias `platform.zasya.online`) | Serves the site and proxies `/api/*` to the HTTP API |
-| Backend API | **API Gateway (HTTP)** `2j7ifmjjyb` + **Lambda** `railway-pds-CHZ-api` | Trains, health, refresh controls, viewer sessions |
+| Backend API | **API Gateway (HTTP)** `2j7ifmjjyb` + **Lambda** `railway-pds-CHZ-api` | Trains, health, refresh controls, viewer sessions, station switch |
 | Live data fetch | **Lambda** `railway-pds-CHZ-refresh` | Pulls NTES data, writes live board JSON to S3 |
 | Scheduler | **EventBridge rule** `railway-pds-CHZ-refresh-schedule` | Triggers the refresh Lambda every 1 minute |
 | Certificate | **ACM** (in `us-east-1`) | TLS for the custom domain (CloudFront requires us-east-1) |
 
-The browser display auto-refreshes every 30s by calling `/api/trains` through CloudFront. Each open tab registers a **viewer session** so the admin page can list and stop active displays.
+The browser display auto-refreshes every 30s by calling `/api/trains` through CloudFront. Each open tab registers a **viewer session** so the admin page can list and stop active displays. The station shown on the board comes from `data/config.json` (`stationCode` / `stationName`).
 
 ---
 
-## Admin panel (viewer sessions)
+## Admin panel
 
 Open **https://platform.zasya.online/admin.html** and enter the admin key.
 
@@ -37,11 +37,23 @@ Open **https://platform.zasya.online/admin.html** and enter the admin key.
 | Active sessions table | Shows each browser tab: start time, how long it has been running, last seen, browser |
 | **Stop** / **Stop all sessions** | Ends that display tab (board shows stopped + Reconnect) |
 | **Start / Stop service** | Enables or pauses NTES live refresh for everyone |
+| **Display station** | Change which NTES station the board shows (see below) |
 
-Notes:
+### Display station
+
+Switch the live board station without redeploying:
+
+- **Preset dropdown** - CHZ (Charlapalli), SC (Secunderabad Jn), HYB, KCG, BMT, LPI, MJF, NLDA
+- **Custom code** - choose "Other / custom code..." and enter any NTES station code + display name, then **Apply station**
+
+This updates `data/config.json` and triggers an immediate NTES refresh. Open display tabs pick up the new station on their next poll (~30s).
+
+While you type a custom code/name, the admin form is not overwritten by the sessions auto-refresh.
+
+### Other notes
 
 - Idle tabs drop off the list after ~90 seconds without a heartbeat.
-- Session stop returns HTTP **409** (not 403) so CloudFront’s SPA `403 ? index.html` rule does not break Safari.
+- Session stop returns HTTP **409** (not 403) so CloudFront's SPA `403 -> index.html` rule does not break Safari.
 - `/api/*` must use an origin request policy that forwards viewer headers/query strings (e.g. `Managed-AllViewerExceptHostHeader`) so `X-Admin-Key` / `sessionId` reach Lambda.
 
 ---
@@ -53,7 +65,7 @@ infra/       CloudFormation templates (template.yaml, certificate.yaml)
 lambda/      Lambda source (api + refresh handlers)
 public/      Static display + admin UI
 routes/      Express routes (local server)
-services/    NTES + merge + session services
+services/    NTES + merge + session + station catalog
 scripts/     build-lambda.sh, deploy.sh, ensure-certificate.sh
 server.js    Local Express server for development
 data/        config.json, trains.json
@@ -94,7 +106,7 @@ The deploy script builds the Lambda, uploads artifacts, deploys the stack, syncs
 Type   : CNAME
 Name   : platform
 Target : <CloudFrontDomain>   (e.g. d2t8ql6frvtke2.cloudfront.net)
-Proxy  : OFF (DNS only / grey cloud) — required for ACM + CloudFront
+Proxy  : OFF (DNS only / grey cloud) - required for ACM + CloudFront
 ```
 
 CI: `.github/workflows/deploy.yml` runs the same deploy via `workflow_dispatch`.
@@ -123,7 +135,7 @@ aws cloudfront update-distribution --id EVTX6GW0ROE2O --distribution-config file
 rm -f cf.json
 ```
 
-CloudFront takes ~3–5 min to propagate. When `Status` = `Deployed` and `Enabled` = `false`, the URLs return an error.
+CloudFront takes ~3-5 min to propagate. When `Status` = `Deployed` and `Enabled` = `false`, the URLs return an error.
 
 ### START (bring it back live)
 
@@ -139,7 +151,7 @@ rm -f cf.json
 aws events enable-rule --name railway-pds-CHZ-refresh-schedule --region ap-south-1
 ```
 
-Wait ~3–5 min after enabling CloudFront for the site to go live again.
+Wait ~3-5 min after enabling CloudFront for the site to go live again.
 
 ### Check status
 
@@ -181,10 +193,10 @@ Serverless, pay-per-use. At POC traffic levels this stack costs **well under $1/
 
 If the `*.cloudfront.net` URL works but `platform.zasya.online` does not:
 
-1. **CNAME on distribution** — `platform.zasya.online` must be listed under CloudFront ? Settings ? Alternate domain names (CNAMEs).
-2. **Certificate** — an ACM cert covering `platform.zasya.online`, issued in **us-east-1**, must be attached.
-3. **DNS** — in Cloudflare, `platform` CNAME ? the CloudFront domain, with **proxy OFF (grey cloud)**.
-4. **Propagation** — allow 5–30 min after DNS/cert changes.
+1. **CNAME on distribution** - `platform.zasya.online` must be listed under CloudFront -> Settings -> Alternate domain names (CNAMEs).
+2. **Certificate** - an ACM cert covering `platform.zasya.online`, issued in **us-east-1**, must be attached.
+3. **DNS** - in Cloudflare, `platform` CNAME -> the CloudFront domain, with **proxy OFF (grey cloud)**.
+4. **Propagation** - allow 5-30 min after DNS/cert changes.
 
 Diagnose:
 

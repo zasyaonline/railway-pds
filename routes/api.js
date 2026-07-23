@@ -5,7 +5,6 @@ const fs = require('fs');
 const path = require('path');
 const { buildDisplayList } = require('../services/mergeService');
 const {
-  SESSIONS_KEY,
   emptyStore,
   touchSession,
   listActive,
@@ -13,6 +12,7 @@ const {
   stopAll,
   STALE_MS
 } = require('../services/sessionService');
+const { STATION_PRESETS, resolveStationInput } = require('../services/stationCatalog');
 
 function createApiRouter(deps) {
   const router = express.Router();
@@ -117,7 +117,9 @@ function createApiRouter(deps) {
       boardTrainCount: cache.boardTrains?.length ?? 0,
       displayTrainCount: buildDisplayList(cache.boardTrains || [], cache.config || {}).length,
       activeSessions: sessions.length,
-      lastUpdated: cache.lastUpdated
+      lastUpdated: cache.lastUpdated,
+      stationCode: cache.config?.stationCode,
+      stationName: cache.config?.stationName
     });
   });
 
@@ -130,7 +132,42 @@ function createApiRouter(deps) {
       sessions,
       refreshEnabled: cache.config.refreshEnabled !== false,
       refreshInterval: cache.config.refreshInterval || 30,
-      staleAfterSeconds: Math.floor(STALE_MS / 1000)
+      staleAfterSeconds: Math.floor(STALE_MS / 1000),
+      stationCode: cache.config.stationCode || 'CHZ',
+      stationName: cache.config.stationName || 'Charlapalli',
+      stationPresets: STATION_PRESETS
+    });
+  });
+
+  router.post('/admin/station', async (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    const resolved = resolveStationInput(req.body || {});
+    if (!resolved.ok) {
+      return res.status(400).json({ error: resolved.error });
+    }
+
+    const cache = getCache();
+    cache.config.stationCode = resolved.stationCode;
+    cache.config.stationName = resolved.stationName;
+    saveConfig(cache.config);
+
+    let refresh = null;
+    try {
+      if (cache.config.refreshEnabled !== false) {
+        await startRefresh();
+        refresh = { ok: true, lastUpdated: getCache().lastUpdated };
+      } else {
+        refresh = { ok: false, reason: 'refresh disabled' };
+      }
+    } catch (err) {
+      refresh = { ok: false, reason: err.message };
+    }
+
+    res.json({
+      stationCode: cache.config.stationCode,
+      stationName: cache.config.stationName,
+      message: `Station set to ${cache.config.stationName} (${cache.config.stationCode})`,
+      refresh
     });
   });
 

@@ -17,6 +17,7 @@ const {
   stopSession,
   stopAll
 } = require('./services/sessionService');
+const { STATION_PRESETS, resolveStationInput } = require('./services/stationCatalog');
 
 const CORS_HEADERS = {
   'Content-Type': 'application/json',
@@ -201,12 +202,52 @@ exports.handler = async (event) => {
       const store = await loadSessions(bucket);
       const sessions = listActive(store);
       const refresh = await getRefreshStatus(bucket);
+      const config = await getJson(bucket, 'data/config.json');
       return respond(200, {
         activeCount: sessions.length,
         sessions,
         refreshEnabled: refresh.refreshEnabled,
         refreshInterval: refresh.refreshInterval,
-        staleAfterSeconds: Math.floor(STALE_MS / 1000)
+        staleAfterSeconds: Math.floor(STALE_MS / 1000),
+        stationCode: config.stationCode || 'CHZ',
+        stationName: config.stationName || 'Charlapalli',
+        stationPresets: STATION_PRESETS
+      });
+    }
+
+    if (method === 'POST' && (path.endsWith('/admin/station') || path === '/api/admin/station')) {
+      if (!requireAdmin(event)) {
+        return respond(401, { error: 'Admin key required' });
+      }
+      const body = parseBody(event);
+      const resolved = resolveStationInput(body);
+      if (!resolved.ok) {
+        return respond(400, { error: resolved.error });
+      }
+
+      const config = await getJson(bucket, 'data/config.json');
+      config.stationCode = resolved.stationCode;
+      config.stationName = resolved.stationName;
+      await putJson(bucket, 'data/config.json', config);
+
+      let refresh = null;
+      try {
+        if (config.refreshEnabled !== false) {
+          const lastUpdated = await runImmediateRefresh(bucket, config);
+          refresh = { ok: true, lastUpdated };
+        } else {
+          refresh = { ok: false, reason: 'refresh disabled' };
+        }
+      } catch (err) {
+        console.warn('[api] station change refresh failed:', err.message);
+        refresh = { ok: false, reason: err.message };
+      }
+
+      return respond(200, {
+        stationCode: config.stationCode,
+        stationName: config.stationName,
+        message: `Station set to ${config.stationName} (${config.stationCode})`,
+        refresh
       });
     }
 

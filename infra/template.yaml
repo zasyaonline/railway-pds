@@ -232,6 +232,13 @@ Resources:
       RouteKey: POST /api/admin/sessions/stop-all
       Target: !Sub 'integrations/${ApiIntegration}'
 
+  AdminStationRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /api/admin/station
+      Target: !Sub 'integrations/${ApiIntegration}'
+
   ApiStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
