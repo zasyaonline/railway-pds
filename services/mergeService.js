@@ -55,16 +55,23 @@ function getSortMinutes(train, now = new Date()) {
  *   - sort by next event time
  *   - limit to displayCount
  */
-function buildDisplayList(boardTrains, config) {
+function buildDisplayList(boardTrains, config, overridesDoc) {
   const now = new Date();
   const hideAfter = config.hideDepartedAfterMinutes ?? 15;
   const displayCount = config.displayCount ?? 10;
 
-  return boardTrains
+  let list = boardTrains
     .filter((t) => t.status !== 'Cancelled')
     .filter((t) => !hasDeparted(t, hideAfter, now))
     .sort((a, b) => getSortMinutes(a, now) - getSortMinutes(b, now))
     .slice(0, displayCount);
+
+  if (overridesDoc) {
+    const { applyPlatformOverrides } = require('./platformOverrides');
+    list = applyPlatformOverrides(list, overridesDoc);
+  }
+
+  return list;
 }
 
 module.exports = { buildDisplayList, hasDeparted, getSortMinutes };

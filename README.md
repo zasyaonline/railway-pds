@@ -19,12 +19,25 @@ Fully serverless on AWS (region `ap-south-1`, single CloudFormation stack **`rai
 |---|---|---|
 | Static site | **S3** `railway-pds-chz-pdsbucket-...` | Hosts the display + admin pages (`public/`) and `data/*.json` |
 | CDN + HTTPS | **CloudFront** `EVTX6GW0ROE2O` (alias `platform.zasya.online`) | Serves the site and proxies `/api/*` to the HTTP API |
-| Backend API | **API Gateway (HTTP)** `2j7ifmjjyb` + **Lambda** `railway-pds-CHZ-api` | Trains, health, refresh controls, viewer sessions, station switch |
+| Backend API | **API Gateway (HTTP)** `2j7ifmjjyb` + **Lambda** `railway-pds-CHZ-api` | Trains, health, refresh, sessions, station switch, platform overrides |
 | Live data fetch | **Lambda** `railway-pds-CHZ-refresh` | Pulls NTES data, writes live board JSON to S3 |
 | Scheduler | **EventBridge rule** `railway-pds-CHZ-refresh-schedule` | Triggers the refresh Lambda every 1 minute |
 | Certificate | **ACM** (in `us-east-1`) | TLS for the custom domain (CloudFront requires us-east-1) |
 
-The browser display auto-refreshes every 30s by calling `/api/trains` through CloudFront. Each open tab registers a **viewer session** so the admin page can list and stop active displays. The station shown on the board comes from `data/config.json` (`stationCode` / `stationName`).
+The browser display polls `/api/trains` every 30s through CloudFront. Each open tab registers a **viewer session** so the admin page can list and stop active displays. The station comes from `data/config.json`. The display pages **5 trains** at a time (pool up to `displayCount`, default 10), rotates pages every 10s, and cycles UI language **EN → TE → HI** every 10s.
+
+---
+
+## Display features
+
+| Feature | Behaviour |
+|---|---|
+| IR branding | Header logo + favicon from `public/img/ir-logo.svg`; tab title becomes `{Station} Railway Station` |
+| Paging | Shows up to **6** rows; a second page appears only when more than 6 eligible trains exist. Rotation is language-wise: EN pages, then TE pages, then HI pages (about every `pageIntervalSeconds`, default 10) |
+| Languages | Station title (from `data/stations.json` master) + column/status labels rotate EN/TE/HI; train names stay NTES English |
+| Platform override hint | Manually overridden PF badges are highlighted on the board |
+
+Config keys in `data/config.json`: `displayCount`, `pageSize`, `pageIntervalSeconds`, `languageRotateSeconds`, `languages`.
 
 ---
 
@@ -37,18 +50,25 @@ Open **https://platform.zasya.online/admin.html** and enter the admin key.
 | Active sessions table | Shows each browser tab: start time, how long it has been running, last seen, browser |
 | **Stop** / **Stop all sessions** | Ends that display tab (board shows stopped + Reconnect) |
 | **Start / Stop service** | Enables or pauses NTES live refresh for everyone |
-| **Display station** | Change which NTES station the board shows (see below) |
+| **Display station** | Validate NTES code and switch the live board (English name from NTES) |
+| **Platform overrides** | Set/clear last-minute PF for trains on the current board |
 
 ### Display station
 
 Switch the live board station without redeploying:
 
-- **Preset dropdown** - CHZ (Charlapalli), SC (Secunderabad Jn), HYB, KCG, BMT, LPI, MJF, NLDA
-- **Custom code** - choose "Other / custom code..." and enter any NTES station code + display name, then **Apply station**
+1. Pick a **preset** from the curated master (`data/stations.json`) or enter any NTES code.
+2. **Apply station** calls NTES to validate the code and auto-fills the **English** name (free-text name entry is not used).
+3. Invalid / unrecognized codes are rejected.
+4. Telugu/Hindi station titles come only from the curated master when present — not from machine translation.
 
 This updates `data/config.json` and triggers an immediate NTES refresh. Open display tabs pick up the new station on their next poll (~30s).
 
-While you type a custom code/name, the admin form is not overwritten by the sessions auto-refresh.
+While you type a station code, the admin form is not overwritten by the sessions auto-refresh.
+
+### Platform overrides
+
+Stored in S3 as `data/platform_overrides.json`. Applied when building the display list (over NTES PF). Stale train numbers are pruned when the board or admin platforms API is served. Overrides appear on the public display within one poll cycle.
 
 ### Other notes
 
@@ -65,10 +85,10 @@ infra/       CloudFormation templates (template.yaml, certificate.yaml)
 lambda/      Lambda source (api + refresh handlers)
 public/      Static display + admin UI
 routes/      Express routes (local server)
-services/    NTES + merge + session + station catalog
+services/    NTES + merge + sessions + station catalog + platform overrides
 scripts/     build-lambda.sh, deploy.sh, ensure-certificate.sh
 server.js    Local Express server for development
-data/        config.json, trains.json
+data/        config.json, stations.json, platform_overrides.json, trains.json
 ```
 
 ---

@@ -71,6 +71,42 @@ async function fetchStationLive(stationCode, hours = 4) {
 }
 
 /**
+ * Validate station code via NTES and extract an English station name when present.
+ * Returns { ok, stationCode, stationName, trainCount } or { ok:false, error }.
+ */
+async function resolveStationFromNtes(stationCode, hours = 2) {
+  const code = String(stationCode || '').trim().toUpperCase();
+  if (!code) {
+    return { ok: false, error: 'stationCode required' };
+  }
+
+  let data;
+  try {
+    data = await fetchStationLive(code, hours);
+  } catch (err) {
+    return { ok: false, error: err.message || 'NTES lookup failed' };
+  }
+
+  const trains = data?.TrainsAtStation || data?.trainsAtStation || [];
+  const name =
+    data?.StationName ||
+    data?.stationName ||
+    data?.StnName ||
+    data?.stnName ||
+    data?.Station ||
+    data?.jStationName ||
+    null;
+
+  // NTES may return an empty board for a valid quiet station — still OK
+  return {
+    ok: true,
+    stationCode: code,
+    stationName: name ? String(name).trim() : null,
+    trainCount: Array.isArray(trains) ? trains.length : 0
+  };
+}
+
+/**
  * Full running status for a single train (station-by-station timeline).
  */
 async function fetchTrainRunning(trainNo, startDate) {
@@ -83,5 +119,6 @@ async function fetchTrainRunning(trainNo, startDate) {
 module.exports = {
   fetchStationLive,
   fetchTrainRunning,
+  resolveStationFromNtes,
   ntesRequest
 };

@@ -1,8 +1,8 @@
 'use strict';
 
 /**
- * Charlapalli PDS — Frontend display controller.
- * Polls /api/trains when refresh is enabled.
+ * Railway PDS — display controller
+ * Polls /api/trains, pages 6 rows, rotates EN/TE/HI for the full board.
  */
 
 const CONFIG = window.PDS_CONFIG || {};
@@ -11,9 +11,26 @@ const REFRESH_MS_DEFAULT = CONFIG.REFRESH_MS || 30_000;
 const SESSION_KEY = 'pds_session_id';
 
 let refreshTimer = null;
+let rotateTimer = null;
 let refreshIntervalMs = REFRESH_MS_DEFAULT;
 let refreshEnabled = true;
 let sessionStopped = false;
+
+let allTrains = [];
+let pageIndex = 0;
+let pageSize = 6;
+let pageIntervalSeconds = 10;
+let languageRotateSeconds = 10;
+let languages = ['en', 'te', 'hi'];
+let langIndex = 0;
+let stationNames = { en: null, te: null, hi: null };
+let stationsByNameMap = {};
+let lastMeta = {};
+let lastUpdatedIso = null;
+
+function $(id) {
+  return document.getElementById(id);
+}
 
 function getSessionId() {
   try {
@@ -37,76 +54,50 @@ function clearSessionId() {
   }
 }
 
-function showSessionStopped() {
-  sessionStopped = true;
-  refreshEnabled = false;
-  if (refreshTimer) {
-    clearInterval(refreshTimer);
-    refreshTimer = null;
-  }
-  const statusEl = document.getElementById('refreshStatus');
-  if (statusEl) {
-    statusEl.textContent = '● STOPPED';
-    statusEl.className = 'refresh-status paused';
-  }
-  document.getElementById('trainBody').innerHTML = `
-    <tr class="no-trains">
-      <td colspan="8">
-        This display session was stopped by an administrator.
-        <button type="button" id="btnReconnect" class="btn-refresh btn-start" style="margin-left:1rem">Reconnect</button>
-      </td>
-    </tr>`;
-  const btn = document.getElementById('btnReconnect');
-  if (btn) {
-    btn.addEventListener('click', reconnectSession);
-  }
-}
-
 function newSessionId() {
   clearSessionId();
   return getSessionId();
 }
 
-function reconnectSession() {
-  sessionStopped = false;
-  refreshEnabled = true;
-  newSessionId();
-  updateRefreshUI(true);
-  loadTrains();
+function currentLang() {
+  return languages[langIndex] || 'en';
+}
+
+function t(key) {
+  const dict = (window.PDS_I18N && window.PDS_I18N[currentLang()]) || window.PDS_I18N.en;
+  const en = window.PDS_I18N.en;
+  return (dict && dict[key]) || (en && en[key]) || key;
+}
+
+function currentLocale() {
+  const dict = window.PDS_I18N[currentLang()] || window.PDS_I18N.en;
+  return dict.locale || 'en-IN';
 }
 
 function trainsUrl() {
-  const sid = encodeURIComponent(getSessionId());
-  return `${API_BASE}/api/trains?sessionId=${sid}`;
+  return `${API_BASE}/api/trains?sessionId=${encodeURIComponent(getSessionId())}`;
 }
 
 function isSessionStoppedPayload(data) {
   return data && (data.error === 'session_stopped' || data.sessionStopped === true);
 }
 
-// ---------------------------------------------------------------------------
-// Clock
-// ---------------------------------------------------------------------------
-
 function updateClock() {
   const now = new Date();
-  document.getElementById('clock').textContent = now.toLocaleTimeString('en-IN', {
+  const locale = currentLocale();
+  $('clock').textContent = now.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
     hour12: false
   });
-  document.getElementById('clockDate').textContent = now.toLocaleDateString('en-IN', {
+  $('clockDate').textContent = now.toLocaleDateString(locale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric'
   });
 }
-
-// ---------------------------------------------------------------------------
-// Status styling
-// ---------------------------------------------------------------------------
 
 function getStatusClass(status) {
   const s = (status || '').toLowerCase();
@@ -124,25 +115,205 @@ function formatTimeCell(expected, scheduled) {
   }
   return `
     <span class="time-expected">${expected}</span>
-    <span class="time-scheduled">Sch: ${scheduled || '—'}</span>
+    <span class="time-scheduled">${t('sch')}: ${scheduled || '—'}</span>
   `;
+}
+
+function applyI18nChrome() {
+  document.documentElement.lang = currentLang();
+
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const key = el.getAttribute('data-i18n');
+    if (key) el.textContent = t(key);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+    const key = el.getAttribute('data-i18n-title');
+    if (key) el.title = t(key);
+  });
+
+  const langEl = $('langIndicator');
+  if (langEl) {
+    const dict = window.PDS_I18N[currentLang()] || window.PDS_I18N.en;
+    langEl.textContent = dict.langLabel || currentLang().toUpperCase();
+  }
+
+  if (lastUpdatedIso) {
+    $('lastUpdated').textContent = new Date(lastUpdatedIso).toLocaleString(currentLocale());
+  }
+
+  updateRefreshStatusLabel();
+  updateClock();
+}
+
+function updateRefreshStatusLabel() {
+  const statusEl = $('refreshStatus');
+  if (!statusEl) return;
+  if (sessionStopped) {
+    statusEl.innerHTML = `● <span>${t('stoppedStatus')}</span>`;
+    statusEl.className = 'refresh-status paused';
+    return;
+  }
+  if (refreshEnabled) {
+    statusEl.innerHTML = `● <span>${t('live')}</span>`;
+    statusEl.className = 'refresh-status live';
+  } else {
+    statusEl.innerHTML = `● <span>${t('paused')}</span>`;
+    statusEl.className = 'refresh-status paused';
+  }
+}
+
+function stationTitleForLang() {
+  const lang = currentLang();
+  const names = stationNames || {};
+  const english = names.en || lastMeta.stationName || 'Railway Station';
+  const localized = names[lang] || english;
+  return `${String(localized).toUpperCase()} ${t('railwayStation')}`;
+}
+
+function updateStationHeading() {
+  const title = stationTitleForLang();
+  $('stationName').textContent = title;
+  const english = stationNames.en || lastMeta.stationName;
+  if (english) {
+    document.title = `${english} Railway Station`;
+  }
+}
+
+function pageCount() {
+  if (!allTrains.length) return 1;
+  return Math.max(1, Math.ceil(allTrains.length / pageSize));
+}
+
+function visibleTrains() {
+  if (allTrains.length <= pageSize) return allTrains;
+  const start = pageIndex * pageSize;
+  return allTrains.slice(start, start + pageSize);
+}
+
+function updatePageIndicator() {
+  const el = $('pageIndicator');
+  if (!el) return;
+  if (allTrains.length <= pageSize) {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  el.textContent = t('pageOf')
+    .replace('{n}', String(pageIndex + 1))
+    .replace('{total}', String(pageCount()));
+}
+
+function localizePlace(name) {
+  return window.PDS_localizeStationName
+    ? window.PDS_localizeStationName(name, currentLang(), stationsByNameMap)
+    : (name || '—');
+}
+
+function localizeTrain(name) {
+  return window.PDS_localizeTrainName
+    ? window.PDS_localizeTrainName(name, currentLang())
+    : (name || '—');
+}
+
+function syncPageRowsCss() {
+  document.documentElement.style.setProperty('--page-rows', String(pageSize || 6));
+}
+
+function emptyRowHtml() {
+  return `<tr class="row-empty"><td colspan="8">&nbsp;</td></tr>`;
+}
+
+function renderTable() {
+  syncPageRowsCss();
+  const tbody = $('trainBody');
+  const trains = visibleTrains();
+
+  if (!allTrains.length) {
+    tbody.innerHTML = `
+      <tr class="no-trains">
+        <td colspan="8">${t('noTrains')}</td>
+      </tr>`;
+    updatePageIndicator();
+    return;
+  }
+
+  const rows = trains.map((train) => {
+    const statusClass = getStatusClass(train.status);
+    const rowClass = train.delay > 0 ? 'row-delayed' : '';
+    const statusText = window.PDS_translateStatus
+      ? window.PDS_translateStatus(train.status, currentLang())
+      : train.status;
+    const pfClass = train.platformOverridden ? 'platform-badge overridden' : 'platform-badge';
+    const pfTitle = train.platformOverridden ? t('pfOverrideTitle') : '';
+
+    return `
+      <tr class="${rowClass}">
+        <td class="train-no">${train.trainNo}</td>
+        <td>${localizeTrain(train.trainName)}</td>
+        <td>${localizePlace(train.from)}</td>
+        <td>${localizePlace(train.to)}</td>
+        <td>${formatTimeCell(train.expectedArrival, train.scheduledArrival)}</td>
+        <td>${formatTimeCell(train.expectedDeparture, train.scheduledDeparture)}</td>
+        <td><span class="${pfClass}" title="${pfTitle}">${train.platform || '—'}</span></td>
+        <td class="${statusClass}">${statusText}</td>
+      </tr>`;
+  });
+
+  // Keep a fixed pageSize-row board layout; pad unused slots as blank
+  while (rows.length < pageSize) {
+    rows.push(emptyRowHtml());
+  }
+
+  tbody.innerHTML = rows.join('');
+  updatePageIndicator();
+}
+
+/**
+ * Rotate pages within the current language, then advance language.
+ * EN 1 → EN 2 → TE 1 → TE 2 → HI 1 → HI 2 → …
+ * With a single page: EN → TE → HI → …
+ */
+function advanceDisplayRotation() {
+  const pages = pageCount();
+  if (pages > 1) {
+    pageIndex += 1;
+    if (pageIndex >= pages) {
+      pageIndex = 0;
+      if (languages.length) {
+        langIndex = (langIndex + 1) % languages.length;
+      }
+    }
+  } else {
+    pageIndex = 0;
+    if (languages.length) {
+      langIndex = (langIndex + 1) % languages.length;
+    }
+  }
+  applyI18nChrome();
+  updateStationHeading();
+  renderTable();
+}
+
+function scheduleDisplayRotation() {
+  if (rotateTimer) {
+    clearInterval(rotateTimer);
+    rotateTimer = null;
+  }
+  const seconds = pageIntervalSeconds || languageRotateSeconds || 10;
+  rotateTimer = setInterval(advanceDisplayRotation, seconds * 1000);
 }
 
 function updateRefreshUI(enabled) {
   refreshEnabled = enabled;
-  const statusEl = document.getElementById('refreshStatus');
-  const btnStart = document.getElementById('btnStart');
-  const btnStop = document.getElementById('btnStop');
+  const btnStart = $('btnStart');
+  const btnStop = $('btnStop');
 
+  updateRefreshStatusLabel();
   if (enabled) {
-    statusEl.textContent = '● LIVE';
-    statusEl.className = 'refresh-status live';
     btnStart.disabled = true;
     btnStop.disabled = false;
     scheduleRefresh();
   } else {
-    statusEl.textContent = '● PAUSED';
-    statusEl.className = 'refresh-status paused';
     btnStart.disabled = false;
     btnStop.disabled = true;
     if (refreshTimer) {
@@ -152,74 +323,79 @@ function updateRefreshUI(enabled) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Render
-// ---------------------------------------------------------------------------
-
-function renderTable(trains) {
-  const tbody = document.getElementById('trainBody');
-
-  if (!trains || trains.length === 0) {
-    tbody.innerHTML = `
-      <tr class="no-trains">
-        <td colspan="8">No upcoming trains at this time</td>
-      </tr>`;
-    return;
-  }
-
-  tbody.innerHTML = trains.map((t) => {
-    const statusClass = getStatusClass(t.status);
-    const isDelayed = t.delay > 0;
-    const rowClass = isDelayed ? 'row-delayed' : '';
-
-    return `
-      <tr class="${rowClass}">
-        <td class="train-no">${t.trainNo}</td>
-        <td>${t.trainName}</td>
-        <td>${t.from}</td>
-        <td>${t.to}</td>
-        <td>${formatTimeCell(t.expectedArrival, t.scheduledArrival)}</td>
-        <td>${formatTimeCell(t.expectedDeparture, t.scheduledDeparture)}</td>
-        <td><span class="platform-badge">${t.platform || '—'}</span></td>
-        <td class="${statusClass}">${t.status}</td>
-      </tr>`;
-  }).join('');
-}
-
 function updateMeta(data) {
-  if (data.stationName) {
-    document.getElementById('stationName').textContent =
-      `${data.stationName.toUpperCase()} RAILWAY STATION`;
+  lastMeta = data;
+  if (data.stationNames) {
+    stationNames = data.stationNames;
+  } else if (data.stationName) {
+    stationNames = { en: data.stationName, te: null, hi: null };
   }
+  if (data.stationsByName && typeof data.stationsByName === 'object') {
+    stationsByNameMap = data.stationsByName;
+  }
+
   if (data.stationCode) {
-    document.getElementById('stationCode').textContent = data.stationCode;
+    $('stationCode').textContent = data.stationCode;
   }
   if (data.lastUpdated) {
-    document.getElementById('lastUpdated').textContent =
-      new Date(data.lastUpdated).toLocaleString('en-IN');
+    lastUpdatedIso = data.lastUpdated;
   }
   if (data.refreshInterval) {
-    document.getElementById('refreshInterval').textContent = data.refreshInterval;
+    $('refreshInterval').textContent = data.refreshInterval;
     refreshIntervalMs = data.refreshInterval * 1000;
+  }
+  if (typeof data.pageSize === 'number' && data.pageSize > 0) {
+    pageSize = data.pageSize;
+    syncPageRowsCss();
+  }
+  if (typeof data.pageIntervalSeconds === 'number' && data.pageIntervalSeconds > 0) {
+    pageIntervalSeconds = data.pageIntervalSeconds;
+  }
+  if (typeof data.languageRotateSeconds === 'number' && data.languageRotateSeconds > 0) {
+    languageRotateSeconds = data.languageRotateSeconds;
+  }
+  if (Array.isArray(data.languages) && data.languages.length) {
+    languages = data.languages;
+    if (langIndex >= languages.length) langIndex = 0;
   }
   if (typeof data.refreshEnabled === 'boolean') {
     updateRefreshUI(data.refreshEnabled);
   }
-  if (data.source) {
-    const footer = document.querySelector('.footer');
-    let srcEl = document.getElementById('dataSource');
-    if (!srcEl) {
-      srcEl = document.createElement('span');
-      srcEl.id = 'dataSource';
-      footer.insertBefore(srcEl, document.querySelector('.refresh-status'));
-    }
-    srcEl.textContent = `Source: ${data.source}`;
-  }
+
+  applyI18nChrome();
+  updateStationHeading();
 }
 
-// ---------------------------------------------------------------------------
-// Data fetch
-// ---------------------------------------------------------------------------
+function showSessionStopped() {
+  sessionStopped = true;
+  refreshEnabled = false;
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+  if (rotateTimer) {
+    clearInterval(rotateTimer);
+    rotateTimer = null;
+  }
+  updateRefreshStatusLabel();
+  $('trainBody').innerHTML = `
+    <tr class="no-trains">
+      <td colspan="8">
+        ${t('stopped')}
+        <button type="button" id="btnReconnect" class="btn-refresh btn-start" style="margin-left:1rem">${t('reconnect')}</button>
+      </td>
+    </tr>`;
+  const btn = $('btnReconnect');
+  if (btn) btn.addEventListener('click', reconnectSession);
+}
+
+function reconnectSession() {
+  sessionStopped = false;
+  refreshEnabled = true;
+  newSessionId();
+  updateRefreshUI(true);
+  loadTrains();
+}
 
 async function loadTrains() {
   if (sessionStopped) return;
@@ -228,7 +404,7 @@ async function loadTrains() {
     const res = await fetch(trainsUrl(), {
       headers: {
         'X-Session-Id': getSessionId(),
-        'Accept': 'application/json'
+        Accept: 'application/json'
       },
       cache: 'no-store'
     });
@@ -244,7 +420,6 @@ async function loadTrains() {
       }
     }
 
-    // CloudFront SPA rules remap some errors to index.html (200 HTML) — treat as dead session
     if (!data || isSessionStoppedPayload(data) || res.status === 409 || res.status === 403) {
       if (isSessionStoppedPayload(data) || res.status === 409 || res.status === 403 || (res.ok && !data)) {
         clearSessionId();
@@ -256,14 +431,17 @@ async function loadTrains() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     if (!data || !Array.isArray(data.trains)) throw new Error('Invalid trains payload');
 
-    renderTable(data.trains);
+    allTrains = data.trains;
+    if (pageIndex >= pageCount()) pageIndex = 0;
     updateMeta(data);
+    renderTable();
+    scheduleDisplayRotation();
   } catch (err) {
     console.error('Failed to load trains:', err);
     if (refreshEnabled && !sessionStopped) {
-      document.getElementById('trainBody').innerHTML = `
+      $('trainBody').innerHTML = `
         <tr class="no-trains">
-          <td colspan="8">Unable to load train data. Retrying…</td>
+          <td colspan="8">${t('unable')}</td>
         </tr>`;
     }
   }
@@ -282,13 +460,10 @@ async function loadRefreshStatus() {
 }
 
 async function setRefresh(action) {
-  const btnStart = document.getElementById('btnStart');
-  const btnStop = document.getElementById('btnStop');
-  btnStart.disabled = true;
-  btnStop.disabled = true;
+  $('btnStart').disabled = true;
+  $('btnStop').disabled = true;
 
   try {
-    // Starting again after an admin stop should mint a fresh session
     if (action === 'start') {
       if (sessionStopped) {
         reconnectSession();
@@ -300,9 +475,7 @@ async function setRefresh(action) {
     const res = await fetch(`${API_BASE}/api/refresh/${action}`, { method: 'POST', cache: 'no-store' });
     const data = await res.json();
     updateRefreshUI(data.refreshEnabled);
-    if (data.refreshEnabled) {
-      await loadTrains();
-    }
+    if (data.refreshEnabled) await loadTrains();
   } catch (err) {
     console.error(`Failed to ${action} refresh:`, err);
     await loadRefreshStatus();
@@ -315,13 +488,10 @@ function scheduleRefresh() {
   refreshTimer = setInterval(loadTrains, refreshIntervalMs);
 }
 
-// ---------------------------------------------------------------------------
-// Init
-// ---------------------------------------------------------------------------
+$('btnStart').addEventListener('click', () => setRefresh('start'));
+$('btnStop').addEventListener('click', () => setRefresh('stop'));
 
-document.getElementById('btnStart').addEventListener('click', () => setRefresh('start'));
-document.getElementById('btnStop').addEventListener('click', () => setRefresh('stop'));
-
+applyI18nChrome();
 updateClock();
 setInterval(updateClock, 1000);
 loadRefreshStatus().then(loadTrains);

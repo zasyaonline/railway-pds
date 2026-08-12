@@ -182,6 +182,47 @@
   color: #f87171;
 }
 
+.station-resolved {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.platform-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.platform-table .pf-input {
+  width: 4rem;
+  background: #0a1628;
+  border: 1px solid #334155;
+  color: #e8edf5;
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.pf-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.pf-overridden {
+  color: #fbbf24;
+  font-size: 0.75rem;
+  margin-left: 0.35rem;
+}
+
+#stationNameInput[readonly] {
+  opacity: 0.85;
+  cursor: default;
+}
+
 .admin-link {
   color: #f97316;
   text-decoration: none;

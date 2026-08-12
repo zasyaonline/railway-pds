@@ -1,13 +1,14 @@
 'use strict';
 
 /**
- * Lambda: get-trains API + refresh start/stop + viewer sessions admin
+ * Lambda: get-trains API + refresh + sessions + station + platform overrides
  */
 
 const { getJson, putJson } = require('./lib/s3');
 const { setScheduleEnabled } = require('./lib/scheduler');
 const { buildDisplayList } = require('./services/mergeService');
 const { fetchLiveBoard, STATION_CODE } = require('./services/railwayService');
+const { resolveStationFromNtes } = require('./services/ntesClient');
 const {
   SESSIONS_KEY,
   STALE_MS,
@@ -17,7 +18,22 @@ const {
   stopSession,
   stopAll
 } = require('./services/sessionService');
-const { STATION_PRESETS, resolveStationInput } = require('./services/stationCatalog');
+const {
+  presetsFromMaster,
+  resolveStationInput,
+  findPreset,
+  normalizeStationCode,
+  stationsByName
+} = require('./services/stationCatalog');
+const {
+  OVERRIDES_KEY,
+  emptyOverrides,
+  applyPlatformOverrides,
+  pruneOverrides,
+  setOverride,
+  clearOverride,
+  clearAllOverrides
+} = require('./services/platformOverrides');
 
 const CORS_HEADERS = {
   'Content-Type': 'application/json',
@@ -77,6 +93,26 @@ async function loadSessions(bucket) {
 
 async function saveSessions(bucket, store) {
   await putJson(bucket, SESSIONS_KEY, store);
+}
+
+async function loadOverrides(bucket) {
+  try {
+    return await getJson(bucket, OVERRIDES_KEY);
+  } catch {
+    return emptyOverrides();
+  }
+}
+
+async function saveOverrides(bucket, doc) {
+  await putJson(bucket, OVERRIDES_KEY, doc);
+}
+
+async function loadStations(bucket) {
+  try {
+    return await getJson(bucket, 'data/stations.json');
+  } catch {
+    return {};
+  }
 }
 
 async function getRefreshStatus(bucket) {
@@ -145,6 +181,15 @@ async function registerViewer(bucket, event) {
   return { ok: true, session: result.session };
 }
 
+function stationLocales(stationsMaster, code, englishName) {
+  const row = findPreset(code, stationsMaster);
+  return {
+    en: row?.en || englishName || code,
+    te: row?.te || null,
+    hi: row?.hi || null
+  };
+}
+
 exports.handler = async (event) => {
   const method = event.requestContext?.http?.method || event.httpMethod || 'GET';
   const path = event.requestContext?.http?.path || event.path || '/';
@@ -183,7 +228,8 @@ exports.handler = async (event) => {
     if (path.endsWith('/health') || path === '/api/health') {
       const live = await getJson(bucket, 'data/live_status.json').catch(() => ({ trains: [] }));
       const config = await getJson(bucket, 'data/config.json');
-      const display = buildDisplayList(live.trains || [], config);
+      const overrides = await loadOverrides(bucket);
+      const display = buildDisplayList(live.trains || [], config, overrides);
       const sessions = listActive(await loadSessions(bucket));
       return respond(200, {
         status: 'ok',
@@ -191,7 +237,9 @@ exports.handler = async (event) => {
         boardTrainCount: (live.trains || []).length,
         displayTrainCount: display.length,
         activeSessions: sessions.length,
-        lastUpdated: live.lastUpdated || null
+        lastUpdated: live.lastUpdated || null,
+        stationCode: config.stationCode,
+        stationName: config.stationName
       });
     }
 
@@ -203,6 +251,7 @@ exports.handler = async (event) => {
       const sessions = listActive(store);
       const refresh = await getRefreshStatus(bucket);
       const config = await getJson(bucket, 'data/config.json');
+      const stations = await loadStations(bucket);
       return respond(200, {
         activeCount: sessions.length,
         sessions,
@@ -211,7 +260,8 @@ exports.handler = async (event) => {
         staleAfterSeconds: Math.floor(STALE_MS / 1000),
         stationCode: config.stationCode || 'CHZ',
         stationName: config.stationName || 'Charlapalli',
-        stationPresets: STATION_PRESETS
+        stationPresets: presetsFromMaster(stations),
+        stationNames: stationLocales(stations, config.stationCode, config.stationName)
       });
     }
 
@@ -220,7 +270,24 @@ exports.handler = async (event) => {
         return respond(401, { error: 'Admin key required' });
       }
       const body = parseBody(event);
-      const resolved = resolveStationInput(body);
+      const code = normalizeStationCode(body.stationCode);
+      const ntes = await resolveStationFromNtes(code);
+      if (!ntes.ok) {
+        return respond(400, { error: ntes.error || 'Invalid station code' });
+      }
+
+      const stations = await loadStations(bucket);
+      const master = findPreset(code, stations);
+      const englishName = ntes.stationName || master?.en || null;
+      if (!englishName) {
+        return respond(400, {
+          error: 'Station code not recognized by NTES (no English name returned)'
+        });
+      }
+      const resolved = resolveStationInput({
+        stationCode: code,
+        ntesName: englishName
+      });
       if (!resolved.ok) {
         return respond(400, { error: resolved.error });
       }
@@ -246,8 +313,72 @@ exports.handler = async (event) => {
       return respond(200, {
         stationCode: config.stationCode,
         stationName: config.stationName,
+        stationNames: stationLocales(stations, config.stationCode, config.stationName),
+        ntesTrainCount: ntes.trainCount,
         message: `Station set to ${config.stationName} (${config.stationCode})`,
         refresh
+      });
+    }
+
+    if (method === 'GET' && (path.endsWith('/admin/platforms') || path === '/api/admin/platforms')) {
+      if (!requireAdmin(event)) {
+        return respond(401, { error: 'Admin key required' });
+      }
+      const config = await getJson(bucket, 'data/config.json');
+      const live = await getJson(bucket, 'data/live_status.json').catch(() => ({ trains: [] }));
+      let overrides = await loadOverrides(bucket);
+      const display = buildDisplayList(live.trains || [], config, overrides);
+      const pruned = pruneOverrides(overrides, display.map((t) => t.trainNo));
+      if (Object.keys(pruned.overrides).length !== Object.keys(overrides.overrides || {}).length) {
+        await saveOverrides(bucket, pruned);
+        overrides = pruned;
+      }
+      return respond(200, {
+        stationCode: config.stationCode,
+        trains: display.map((t) => ({
+          trainNo: t.trainNo,
+          trainName: t.trainName,
+          ntesPlatform: t.ntesPlatform || t.platform,
+          platform: t.platform,
+          platformOverridden: Boolean(t.platformOverridden),
+          status: t.status
+        })),
+        overrides: overrides.overrides || {}
+      });
+    }
+
+    if (method === 'POST' && (path.endsWith('/admin/platforms/clear') || path === '/api/admin/platforms/clear')) {
+      if (!requireAdmin(event)) {
+        return respond(401, { error: 'Admin key required' });
+      }
+      const body = parseBody(event);
+      let doc;
+      if (body.all) {
+        doc = clearAllOverrides().doc;
+      } else {
+        const current = await loadOverrides(bucket);
+        const result = clearOverride(current, body.trainNo);
+        if (!result.ok) return respond(400, { error: result.error });
+        doc = result.doc;
+      }
+      await saveOverrides(bucket, doc);
+      return respond(200, { ok: true, overrides: doc.overrides });
+    }
+
+    if (method === 'POST' && (path.endsWith('/admin/platforms') || path === '/api/admin/platforms')) {
+      if (!requireAdmin(event)) {
+        return respond(401, { error: 'Admin key required' });
+      }
+      const body = parseBody(event);
+      const current = await loadOverrides(bucket);
+      const result = setOverride(current, body.trainNo, body.platform, body.note);
+      if (!result.ok) return respond(400, { error: result.error });
+      await saveOverrides(bucket, result.doc);
+      return respond(200, {
+        ok: true,
+        trainNo: result.trainNo,
+        override: result.override,
+        overrides: result.doc.overrides
       });
     }
 
@@ -279,7 +410,7 @@ exports.handler = async (event) => {
       return respond(200, { stopped: true, sessionId: String(sessionId) });
     }
 
-    // Default: trains board (also registers viewer heartbeat via X-Session-Id)
+    // Default: trains board
     const viewer = await registerViewer(bucket, event);
     if (viewer.killed) {
       return respond(409, {
@@ -290,14 +421,27 @@ exports.handler = async (event) => {
 
     const config = await getJson(bucket, 'data/config.json');
     const live = await getJson(bucket, 'data/live_status.json');
-    const trains = buildDisplayList(live.trains || [], config);
+    let overrides = await loadOverrides(bucket);
+    const trains = buildDisplayList(live.trains || [], config, overrides);
+    const pruned = pruneOverrides(overrides, trains.map((t) => t.trainNo));
+    if (Object.keys(pruned.overrides).length !== Object.keys(overrides.overrides || {}).length) {
+      await saveOverrides(bucket, pruned);
+      overrides = pruned;
+    }
 
+    const stations = await loadStations(bucket);
     return respond(200, {
       stationCode: config.stationCode,
       stationName: config.stationName,
+      stationNames: stationLocales(stations, config.stationCode, config.stationName),
+      stationsByName: stationsByName(stations),
       lastUpdated: live.lastUpdated,
       refreshInterval: config.refreshInterval,
       refreshEnabled: config.refreshEnabled !== false,
+      pageSize: config.pageSize ?? 6,
+      pageIntervalSeconds: config.pageIntervalSeconds ?? 10,
+      languageRotateSeconds: config.languageRotateSeconds ?? 10,
+      languages: config.languages || ['en', 'te', 'hi'],
       source: 'NTES Live Station',
       trains
     });

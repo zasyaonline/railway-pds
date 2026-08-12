@@ -4,12 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDS Admin — Sessions</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="icon" href="/img/favicon.png" type="image/png" sizes="64x64">
+  <link rel="icon" href="/img/ir-logo.png" type="image/png">
+  <link rel="stylesheet" href="/css/style.css?v=20260812b">
+  <link rel="stylesheet" href="/css/admin.css?v=20260812b">
 </head>
 <body class="admin-body">
   <header class="header admin-header">
     <div class="header-left">
+      <img src="/img/ir-logo.png" alt="Indian Railways" class="logo">
       <h1>PDS Admin</h1>
     </div>
     <div class="header-right">
@@ -52,7 +55,10 @@
 
       <section class="station-card">
         <h2>Display station</h2>
-        <p class="station-help">Pick a preset or enter any NTES station code. Saving updates the live board for all open displays.</p>
+        <p class="station-help">
+          Enter an NTES station code. Apply validates the code with NTES and sets the English name automatically.
+          Telugu/Hindi titles come from the curated station master when available.
+        </p>
         <div class="station-row">
           <label for="stationPreset">Preset</label>
           <select id="stationPreset"></select>
@@ -60,11 +66,38 @@
         <div class="station-row station-custom">
           <label for="stationCodeInput">Code</label>
           <input id="stationCodeInput" type="text" maxlength="6" placeholder="e.g. SC" autocomplete="off" spellcheck="false">
-          <label for="stationNameInput">Name</label>
-          <input id="stationNameInput" type="text" maxlength="80" placeholder="Station name" autocomplete="off">
+          <label for="stationNameInput">English (NTES)</label>
+          <input id="stationNameInput" type="text" maxlength="80" placeholder="Resolved on Apply" autocomplete="off" readonly>
           <button type="button" id="btnApplyStation" class="btn-refresh btn-start">Apply station</button>
         </div>
+        <p class="station-resolved" id="stationResolved" hidden></p>
         <p class="station-status" id="stationStatus" hidden></p>
+      </section>
+
+      <section class="station-card platform-card">
+        <h2>Platform overrides</h2>
+        <p class="station-help">
+          Last-minute PF changes for trains on the current board. Overrides apply immediately on the next display poll.
+        </p>
+        <div class="platform-actions">
+          <button type="button" id="btnRefreshPlatforms" class="btn-refresh btn-start">Refresh platforms</button>
+          <button type="button" id="btnClearAllPlatforms" class="btn-refresh btn-stop">Clear all overrides</button>
+        </div>
+        <table class="train-table admin-table platform-table">
+          <thead>
+            <tr>
+              <th>Train</th>
+              <th>Name</th>
+              <th>NTES PF</th>
+              <th>Override</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="platformBody">
+            <tr class="no-trains"><td colspan="5">Unlock admin to load platforms</td></tr>
+          </tbody>
+        </table>
+        <p class="station-status" id="platformStatus" hidden></p>
       </section>
 
       <table class="train-table admin-table">
@@ -91,7 +124,7 @@
     </section>
   </main>
 
-  <script src="/config.js?v=20260723e"></script>
-  <script src="/js/admin.js?v=20260723e"></script>
+  <script src="/config.js?v=20260812b"></script>
+  <script src="/js/admin.js?v=20260812b"></script>
 </body>
 </html>

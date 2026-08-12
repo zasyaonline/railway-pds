@@ -12,13 +12,30 @@ const {
   stopAll,
   STALE_MS
 } = require('../services/sessionService');
-const { STATION_PRESETS, resolveStationInput } = require('../services/stationCatalog');
+const {
+  loadStationsMaster,
+  presetsFromMaster,
+  resolveStationInput,
+  findPreset,
+  normalizeStationCode,
+  stationsByName
+} = require('../services/stationCatalog');
+const { resolveStationFromNtes } = require('../services/ntesClient');
+const {
+  emptyOverrides,
+  normalizeOverrides,
+  pruneOverrides,
+  setOverride,
+  clearOverride,
+  clearAllOverrides
+} = require('../services/platformOverrides');
 
 function createApiRouter(deps) {
   const router = express.Router();
   const { getCache, startRefresh, stopRefresh, saveConfig } = deps;
   const dataDir = path.join(__dirname, '..', 'data');
   const sessionsPath = path.join(dataDir, 'sessions.json');
+  const overridesPath = path.join(dataDir, 'platform_overrides.json');
   const adminKey = process.env.ADMIN_KEY || 'chz-ops';
 
   function readSessions() {
@@ -31,6 +48,27 @@ function createApiRouter(deps) {
 
   function writeSessions(store) {
     fs.writeFileSync(sessionsPath, JSON.stringify(store, null, 2));
+  }
+
+  function readOverrides() {
+    try {
+      return normalizeOverrides(JSON.parse(fs.readFileSync(overridesPath, 'utf8')));
+    } catch {
+      return emptyOverrides();
+    }
+  }
+
+  function writeOverrides(doc) {
+    fs.writeFileSync(overridesPath, JSON.stringify(normalizeOverrides(doc), null, 2));
+  }
+
+  function stationLocales(code, englishName) {
+    const row = findPreset(code);
+    return {
+      en: row?.en || englishName || code,
+      te: row?.te || null,
+      hi: row?.hi || null
+    };
   }
 
   function requireAdmin(req, res) {
@@ -72,13 +110,26 @@ function createApiRouter(deps) {
       return res.status(503).json({ error: 'Data not yet loaded' });
     }
 
-    const trains = buildDisplayList(cache.boardTrains, cache.config);
+    let overrides = readOverrides();
+    const trains = buildDisplayList(cache.boardTrains, cache.config, overrides);
+    const pruned = pruneOverrides(overrides, trains.map((t) => t.trainNo));
+    if (Object.keys(pruned.overrides).length !== Object.keys(overrides.overrides || {}).length) {
+      writeOverrides(pruned);
+      overrides = pruned;
+    }
+
     res.json({
       stationCode: cache.config.stationCode,
       stationName: cache.config.stationName,
+      stationNames: stationLocales(cache.config.stationCode, cache.config.stationName),
+      stationsByName: stationsByName(loadStationsMaster()),
       lastUpdated: cache.lastUpdated,
       refreshInterval: cache.config.refreshInterval,
       refreshEnabled: cache.config.refreshEnabled !== false,
+      pageSize: cache.config.pageSize ?? 6,
+      pageIntervalSeconds: cache.config.pageIntervalSeconds ?? 10,
+      languageRotateSeconds: cache.config.languageRotateSeconds ?? 10,
+      languages: cache.config.languages || ['en', 'te', 'hi'],
       source: 'NTES Live Station',
       trains
     });
@@ -111,11 +162,12 @@ function createApiRouter(deps) {
   router.get('/health', (req, res) => {
     const cache = getCache();
     const sessions = listActive(readSessions());
+    const overrides = readOverrides();
     res.json({
       status: 'ok',
       refreshEnabled: cache.config.refreshEnabled !== false,
       boardTrainCount: cache.boardTrains?.length ?? 0,
-      displayTrainCount: buildDisplayList(cache.boardTrains || [], cache.config || {}).length,
+      displayTrainCount: buildDisplayList(cache.boardTrains || [], cache.config || {}, overrides).length,
       activeSessions: sessions.length,
       lastUpdated: cache.lastUpdated,
       stationCode: cache.config?.stationCode,
@@ -127,6 +179,7 @@ function createApiRouter(deps) {
     if (!requireAdmin(req, res)) return;
     const cache = getCache();
     const sessions = listActive(readSessions());
+    const stations = loadStationsMaster();
     res.json({
       activeCount: sessions.length,
       sessions,
@@ -135,13 +188,31 @@ function createApiRouter(deps) {
       staleAfterSeconds: Math.floor(STALE_MS / 1000),
       stationCode: cache.config.stationCode || 'CHZ',
       stationName: cache.config.stationName || 'Charlapalli',
-      stationPresets: STATION_PRESETS
+      stationPresets: presetsFromMaster(stations),
+      stationNames: stationLocales(cache.config.stationCode, cache.config.stationName)
     });
   });
 
   router.post('/admin/station', async (req, res) => {
     if (!requireAdmin(req, res)) return;
-    const resolved = resolveStationInput(req.body || {});
+    const code = normalizeStationCode(req.body?.stationCode);
+    const ntes = await resolveStationFromNtes(code);
+    if (!ntes.ok) {
+      return res.status(400).json({ error: ntes.error || 'Invalid station code' });
+    }
+
+    const master = findPreset(code);
+    const englishName = ntes.stationName || master?.en || null;
+    if (!englishName) {
+      return res.status(400).json({
+        error: 'Station code not recognized by NTES (no English name returned)'
+      });
+    }
+
+    const resolved = resolveStationInput({
+      stationCode: code,
+      ntesName: englishName
+    });
     if (!resolved.ok) {
       return res.status(400).json({ error: resolved.error });
     }
@@ -166,9 +237,64 @@ function createApiRouter(deps) {
     res.json({
       stationCode: cache.config.stationCode,
       stationName: cache.config.stationName,
+      stationNames: stationLocales(cache.config.stationCode, cache.config.stationName),
+      ntesTrainCount: ntes.trainCount,
       message: `Station set to ${cache.config.stationName} (${cache.config.stationCode})`,
       refresh
     });
+  });
+
+  router.get('/admin/platforms', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    const cache = getCache();
+    let overrides = readOverrides();
+    const display = buildDisplayList(cache.boardTrains || [], cache.config || {}, overrides);
+    const pruned = pruneOverrides(overrides, display.map((t) => t.trainNo));
+    if (Object.keys(pruned.overrides).length !== Object.keys(overrides.overrides || {}).length) {
+      writeOverrides(pruned);
+      overrides = pruned;
+    }
+    res.json({
+      stationCode: cache.config?.stationCode,
+      trains: display.map((t) => ({
+        trainNo: t.trainNo,
+        trainName: t.trainName,
+        ntesPlatform: t.ntesPlatform || t.platform,
+        platform: t.platform,
+        platformOverridden: Boolean(t.platformOverridden),
+        status: t.status
+      })),
+      overrides: overrides.overrides || {}
+    });
+  });
+
+  router.post('/admin/platforms', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    const current = readOverrides();
+    const result = setOverride(current, req.body?.trainNo, req.body?.platform, req.body?.note);
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    writeOverrides(result.doc);
+    res.json({
+      ok: true,
+      trainNo: result.trainNo,
+      override: result.override,
+      overrides: result.doc.overrides
+    });
+  });
+
+  router.post('/admin/platforms/clear', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    let doc;
+    if (req.body?.all) {
+      doc = clearAllOverrides().doc;
+    } else {
+      const current = readOverrides();
+      const result = clearOverride(current, req.body?.trainNo);
+      if (!result.ok) return res.status(400).json({ error: result.error });
+      doc = result.doc;
+    }
+    writeOverrides(doc);
+    res.json({ ok: true, overrides: doc.overrides });
   });
 
   router.post('/admin/sessions/stop', (req, res) => {

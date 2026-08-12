@@ -10,6 +10,8 @@ let pollTimer = null;
 let stationPresets = [];
 let stationFormDirty = false;
 let stationFormReady = false;
+let platformDirty = {};
+let platformPollInFlight = false;
 
 function $(id) {
   return document.getElementById(id);
@@ -95,13 +97,26 @@ function fillStationPresets(presets) {
   }
 }
 
-function syncStationForm(code, name, force) {
+function showResolvedPreview(code, name, names) {
+  const el = $('stationResolved');
+  if (!code) {
+    el.hidden = true;
+    return;
+  }
+  const parts = [`Resolved: ${name || '—'} (${code})`];
+  if (names?.te) parts.push(`TE: ${names.te}`);
+  if (names?.hi) parts.push(`HI: ${names.hi}`);
+  el.textContent = parts.join(' · ');
+  el.hidden = false;
+}
+
+function syncStationForm(code, name, force, names) {
   $('currentStation').textContent = code ? `${code}` : '—';
   if (name) {
     $('currentStation').title = name;
   }
+  showResolvedPreview(code, name, names);
 
-  // Don't clobber what the admin is typing
   if (!force && (stationFormDirty || isStationFormFocused())) {
     return;
   }
@@ -131,10 +146,21 @@ function onPresetChange() {
   if (!preset) return;
   $('stationCodeInput').value = preset.code;
   $('stationNameInput').value = preset.name;
+  showResolvedPreview(preset.code, preset.name, {
+    te: preset.te,
+    hi: preset.hi
+  });
 }
 
 function setStationStatus(message, isError) {
   const el = $('stationStatus');
+  el.hidden = !message;
+  el.textContent = message || '';
+  el.className = `station-status${isError ? ' error' : ''}`;
+}
+
+function setPlatformStatus(message, isError) {
+  const el = $('platformStatus');
   el.hidden = !message;
   el.textContent = message || '';
   el.className = `station-status${isError ? ' error' : ''}`;
@@ -149,7 +175,7 @@ function renderSessions(data) {
     fillStationPresets(data.stationPresets);
   }
   if (data.stationCode) {
-    syncStationForm(data.stationCode, data.stationName, !stationFormReady);
+    syncStationForm(data.stationCode, data.stationName, !stationFormReady, data.stationNames);
   }
 
   const tbody = $('sessionBody');
@@ -187,26 +213,135 @@ function renderSessions(data) {
   });
 }
 
+function renderPlatforms(data) {
+  const tbody = $('platformBody');
+  const trains = data.trains || [];
+  if (!trains.length) {
+    tbody.innerHTML = `<tr class="no-trains"><td colspan="5">No trains on the current board</td></tr>`;
+    return;
+  }
+
+  const focused = document.activeElement;
+  const focusedTrain = focused && focused.dataset && focused.dataset.train
+    ? focused.dataset.train
+    : null;
+
+  tbody.innerHTML = trains.map((t) => {
+    const dirtyVal = platformDirty[t.trainNo];
+    const value = dirtyVal != null
+      ? dirtyVal
+      : (t.platformOverridden ? t.platform : '');
+    const mark = t.platformOverridden ? ' <span class="pf-overridden">override</span>' : '';
+    return `
+      <tr>
+        <td class="train-no">${t.trainNo}</td>
+        <td>${t.trainName || '—'}</td>
+        <td>${t.ntesPlatform || '—'}${mark}</td>
+        <td>
+          <input
+            class="pf-input"
+            data-train="${t.trainNo}"
+            type="text"
+            maxlength="4"
+            placeholder="PF"
+            value="${String(value).replace(/"/g, '&quot;')}"
+            autocomplete="off"
+          >
+        </td>
+        <td class="pf-actions">
+          <button type="button" class="btn-refresh btn-start btn-pf-save" data-train="${t.trainNo}">Save</button>
+          <button type="button" class="btn-refresh btn-stop btn-pf-clear" data-train="${t.trainNo}">Clear</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('.pf-input').forEach((input) => {
+    input.addEventListener('input', () => {
+      platformDirty[input.dataset.train] = input.value;
+    });
+    if (focusedTrain && input.dataset.train === focusedTrain) {
+      input.focus();
+      const len = input.value.length;
+      input.setSelectionRange(len, len);
+    }
+  });
+
+  tbody.querySelectorAll('.btn-pf-save').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const trainNo = btn.dataset.train;
+      const input = tbody.querySelector(`.pf-input[data-train="${trainNo}"]`);
+      const platform = (input?.value || '').trim();
+      if (!platform) {
+        setPlatformStatus('Enter a platform number before Save', true);
+        return;
+      }
+      btn.disabled = true;
+      try {
+        await api('/api/admin/platforms', {
+          method: 'POST',
+          body: JSON.stringify({ trainNo, platform })
+        });
+        delete platformDirty[trainNo];
+        setPlatformStatus(`Saved PF ${platform} for ${trainNo}`);
+        await loadPlatforms();
+      } catch (err) {
+        setPlatformStatus(err.message, true);
+        btn.disabled = false;
+      }
+    });
+  });
+
+  tbody.querySelectorAll('.btn-pf-clear').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const trainNo = btn.dataset.train;
+      btn.disabled = true;
+      try {
+        await api('/api/admin/platforms/clear', {
+          method: 'POST',
+          body: JSON.stringify({ trainNo })
+        });
+        delete platformDirty[trainNo];
+        setPlatformStatus(`Cleared override for ${trainNo}`);
+        await loadPlatforms();
+      } catch (err) {
+        setPlatformStatus(err.message, true);
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
 async function loadSessions() {
   const data = await api('/api/admin/sessions');
   renderSessions(data);
 }
 
+async function loadPlatforms() {
+  if (platformPollInFlight) return;
+  platformPollInFlight = true;
+  try {
+    const data = await api('/api/admin/platforms');
+    renderPlatforms(data);
+  } finally {
+    platformPollInFlight = false;
+  }
+}
+
 async function applyStation() {
   const stationCode = $('stationCodeInput').value.trim();
-  const stationName = $('stationNameInput').value.trim();
   const btn = $('btnApplyStation');
   btn.disabled = true;
-  setStationStatus('Updating station…');
+  setStationStatus('Validating with NTES…');
   try {
     const result = await api('/api/admin/station', {
       method: 'POST',
-      body: JSON.stringify({ stationCode, stationName })
+      body: JSON.stringify({ stationCode })
     });
     setStationStatus(result.message || 'Station updated');
     stationFormDirty = false;
     await loadSessions();
-    syncStationForm(result.stationCode, result.stationName, true);
+    syncStationForm(result.stationCode, result.stationName, true, result.stationNames);
+    await loadPlatforms();
   } catch (err) {
     setStationStatus(err.message, true);
   } finally {
@@ -219,6 +354,7 @@ async function unlock() {
   $('gateError').hidden = true;
   try {
     await loadSessions();
+    await loadPlatforms();
     try {
       sessionStorage.setItem(KEY_STORAGE, adminKey);
     } catch {
@@ -229,6 +365,11 @@ async function unlock() {
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(() => {
       loadSessions().catch(() => {});
+      const active = document.activeElement;
+      const editingPf = active && active.classList && active.classList.contains('pf-input');
+      if (!editingPf) {
+        loadPlatforms().catch(() => {});
+      }
     }, 5000);
   } catch (err) {
     $('gateError').textContent = err.status === 401 ? 'Invalid admin key' : err.message;
@@ -243,26 +384,48 @@ $('adminKey').addEventListener('keydown', (e) => {
 
 $('stationPreset').addEventListener('change', onPresetChange);
 $('btnApplyStation').addEventListener('click', applyStation);
-['stationCodeInput', 'stationNameInput'].forEach((id) => {
-  $(id).addEventListener('input', markStationDirty);
-  $(id).addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      applyStation();
-    }
-  });
+$('stationCodeInput').addEventListener('input', markStationDirty);
+$('stationCodeInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    applyStation();
+  }
 });
 $('stationCodeInput').addEventListener('input', () => {
   $('stationCodeInput').value = $('stationCodeInput').value.toUpperCase();
   const code = $('stationCodeInput').value.trim();
   const preset = stationPresets.find((s) => s.code === code);
   $('stationPreset').value = preset ? code : CUSTOM_VALUE;
-  if (preset && !$('stationNameInput').value.trim()) {
+  if (preset) {
     $('stationNameInput').value = preset.name;
+    showResolvedPreview(preset.code, preset.name, { te: preset.te, hi: preset.hi });
+  } else {
+    $('stationNameInput').value = '';
+    showResolvedPreview(code, null, null);
   }
 });
 
-$('btnRefreshList').addEventListener('click', () => loadSessions().catch((e) => alert(e.message)));
+$('btnRefreshList').addEventListener('click', () => {
+  Promise.all([loadSessions(), loadPlatforms()]).catch((e) => alert(e.message));
+});
+$('btnRefreshPlatforms').addEventListener('click', () => {
+  loadPlatforms().catch((e) => alert(e.message));
+});
+$('btnClearAllPlatforms').addEventListener('click', async () => {
+  if (!confirm('Clear all platform overrides?')) return;
+  try {
+    await api('/api/admin/platforms/clear', {
+      method: 'POST',
+      body: JSON.stringify({ all: true })
+    });
+    platformDirty = {};
+    setPlatformStatus('All platform overrides cleared');
+    await loadPlatforms();
+  } catch (err) {
+    setPlatformStatus(err.message, true);
+  }
+});
+
 $('btnStopAll').addEventListener('click', async () => {
   if (!confirm('Stop all active display sessions?')) return;
   try {
@@ -277,6 +440,7 @@ $('btnServiceStart').addEventListener('click', async () => {
   try {
     await api('/api/refresh/start', { method: 'POST', body: '{}' });
     await loadSessions();
+    await loadPlatforms();
   } catch (err) {
     alert(err.message);
   }

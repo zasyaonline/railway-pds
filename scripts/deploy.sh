@@ -111,6 +111,8 @@ echo ""
 echo "==> Uploading station data..."
 aws s3 cp "$ROOT/data/config.json" "s3://${BUCKET}/data/config.json" --region "$REGION"
 aws s3 cp "$ROOT/data/trains.json" "s3://${BUCKET}/data/trains.json" --region "$REGION"
+aws s3 cp "$ROOT/data/stations.json" "s3://${BUCKET}/data/stations.json" --region "$REGION"
+aws s3 cp "$ROOT/data/platform_overrides.json" "s3://${BUCKET}/data/platform_overrides.json" --region "$REGION"
 
 mkdir -p "$ROOT/dist/public"
 cp -r "$ROOT/public/"* "$ROOT/dist/public/"
@@ -132,6 +134,8 @@ aws s3 sync "$ROOT/dist/public/" "s3://${BUCKET}/" \
 
 aws s3 cp "$ROOT/data/config.json" "s3://${BUCKET}/data/config.json" --region "$REGION"
 aws s3 cp "$ROOT/data/trains.json" "s3://${BUCKET}/data/trains.json" --region "$REGION"
+aws s3 cp "$ROOT/data/stations.json" "s3://${BUCKET}/data/stations.json" --region "$REGION"
+aws s3 cp "$ROOT/data/platform_overrides.json" "s3://${BUCKET}/data/platform_overrides.json" --region "$REGION"
 
 echo "==> Invalidating CloudFront cache..."
 if [ -n "$DIST_ID" ] && [ "$DIST_ID" != "None" ]; then
