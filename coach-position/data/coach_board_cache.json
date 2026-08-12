@@ -1,0 +1,175 @@
+{
+  "stationCode": "CHZ",
+  "stationName": "Charlapalli",
+  "generatedAt": "2026-08-12T13:42:35.027Z",
+  "showBeforeMinutes": 10,
+  "hideAfterDepartMinutes": 15,
+  "bogieLengthMeters": 25,
+  "languages": [
+    "en",
+    "te",
+    "hi"
+  ],
+  "display": {
+    "id": "entrance-main",
+    "name": "Main entrance TV",
+    "mode": "dual",
+    "platformsShown": [
+      "1",
+      "2"
+    ],
+    "facing": "engine_left"
+  },
+  "platforms": [
+    {
+      "platform": "1",
+      "inWindow": true,
+      "train": {
+        "trainNo": "12714",
+        "trainName": "SATAVAHANA SF",
+        "platform": "1",
+        "expectedArrival": null,
+        "expectedDeparture": "19:17",
+        "minutesUntil": 5
+      },
+      "compositionAvailable": true,
+      "coaches": [
+        {
+          "seq": 1,
+          "code": "ENG",
+          "typeId": "engine",
+          "label": "ENG"
+        },
+        {
+          "seq": 2,
+          "code": "SLR",
+          "typeId": "slr",
+          "label": "SLR"
+        },
+        {
+          "seq": 3,
+          "code": "S1",
+          "typeId": "sleeper",
+          "label": "S1"
+        },
+        {
+          "seq": 4,
+          "code": "S2",
+          "typeId": "sleeper",
+          "label": "S2"
+        },
+        {
+          "seq": 5,
+          "code": "S3",
+          "typeId": "sleeper",
+          "label": "S3"
+        },
+        {
+          "seq": 6,
+          "code": "PC",
+          "typeId": "pantry",
+          "label": "PC"
+        },
+        {
+          "seq": 7,
+          "code": "B1",
+          "typeId": "ac3",
+          "label": "B1"
+        },
+        {
+          "seq": 8,
+          "code": "B2",
+          "typeId": "ac3",
+          "label": "B2"
+        },
+        {
+          "seq": 9,
+          "code": "A1",
+          "typeId": "ac2",
+          "label": "A1"
+        },
+        {
+          "seq": 10,
+          "code": "HA1",
+          "typeId": "ac1",
+          "label": "HA1"
+        },
+        {
+          "seq": 11,
+          "code": "SLR",
+          "typeId": "slr",
+          "label": "SLR"
+        }
+      ],
+      "compositionSource": "fixture",
+      "youAreHere": {
+        "enabled": true,
+        "slotIndex": 3,
+        "metersFromEngineEnd": 75,
+        "alignedCoachCode": "S2",
+        "facing": "engine_left"
+      },
+      "nextLabel": null
+    },
+    {
+      "platform": "2",
+      "inWindow": true,
+      "train": {
+        "trainNo": "17012",
+        "trainName": "SKZR-BIDR EXP",
+        "platform": "2",
+        "expectedArrival": "19:20",
+        "expectedDeparture": "19:20",
+        "minutesUntil": 8
+      },
+      "compositionAvailable": true,
+      "coaches": [
+        {
+          "seq": 1,
+          "code": "ENG",
+          "typeId": "engine",
+          "label": "ENG"
+        },
+        {
+          "seq": 2,
+          "code": "GS",
+          "typeId": "general",
+          "label": "GS"
+        },
+        {
+          "seq": 3,
+          "code": "S1",
+          "typeId": "sleeper",
+          "label": "S1"
+        },
+        {
+          "seq": 4,
+          "code": "S2",
+          "typeId": "sleeper",
+          "label": "S2"
+        },
+        {
+          "seq": 5,
+          "code": "B1",
+          "typeId": "ac3",
+          "label": "B1"
+        },
+        {
+          "seq": 6,
+          "code": "SLR",
+          "typeId": "slr",
+          "label": "SLR"
+        }
+      ],
+      "compositionSource": "fixture",
+      "youAreHere": {
+        "enabled": false,
+        "slotIndex": null,
+        "metersFromEngineEnd": null,
+        "alignedCoachCode": null,
+        "facing": "engine_left"
+      },
+      "nextLabel": null
+    }
+  ]
+}

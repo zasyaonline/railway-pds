@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coach-position.zasya.online/schemas/coach_board_response.schema.json",
+  "title": "CoachBoardResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["stationCode", "display", "generatedAt", "platforms"],
+  "properties": {
+    "stationCode": { "type": "string" },
+    "stationName": { "type": "string" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "showBeforeMinutes": { "type": "integer" },
+    "hideAfterDepartMinutes": { "type": "integer" },
+    "bogieLengthMeters": { "type": "number" },
+    "languages": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "display": {
+      "type": "object",
+      "required": ["id", "mode", "platformsShown"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "mode": { "type": "string", "enum": ["dual", "single"] },
+        "platformsShown": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "facing": {
+          "type": "string",
+          "enum": ["engine_left", "engine_right"]
+        }
+      }
+    },
+    "platforms": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/platformStrip" }
+    },
+    "idle": {
+      "type": "object",
+      "description": "Present when no platform has an in-window train",
+      "properties": {
+        "message": { "type": "string" },
+        "nextTrain": { "$ref": "#/$defs/trainSummary" }
+      }
+    }
+  },
+  "$defs": {
+    "trainSummary": {
+      "type": "object",
+      "properties": {
+        "trainNo": { "type": "string" },
+        "trainName": { "type": "string" },
+        "platform": { "type": "string" },
+        "expectedArrival": { "type": ["string", "null"] },
+        "expectedDeparture": { "type": ["string", "null"] },
+        "minutesUntil": { "type": ["number", "null"] }
+      }
+    },
+    "coach": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seq", "code", "typeId", "label"],
+      "properties": {
+        "seq": { "type": "integer", "minimum": 1 },
+        "code": { "type": "string" },
+        "typeId": { "type": "string" },
+        "label": { "type": "string" }
+      }
+    },
+    "youAreHereResolved": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "slotIndex": { "type": ["integer", "null"] },
+        "metersFromEngineEnd": { "type": ["number", "null"] },
+        "alignedCoachCode": { "type": ["string", "null"] },
+        "facing": {
+          "type": "string",
+          "enum": ["engine_left", "engine_right"]
+        }
+      }
+    },
+    "platformStrip": {
+      "type": "object",
+      "required": ["platform", "inWindow"],
+      "properties": {
+        "platform": { "type": "string" },
+        "inWindow": { "type": "boolean" },
+        "train": { "$ref": "#/$defs/trainSummary" },
+        "compositionAvailable": { "type": "boolean" },
+        "coaches": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/coach" }
+        },
+        "youAreHere": { "$ref": "#/$defs/youAreHereResolved" },
+        "nextLabel": {
+          "type": ["string", "null"],
+          "description": "Optional V1 secondary next-train hint"
+        }
+      }
+    }
+  }
+}

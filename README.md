@@ -6,6 +6,8 @@ Passenger Display System (POC) for **Charlapalli station (CHZ)**, showing trains
 |---|---|
 | Live display | https://platform.zasya.online |
 | Admin (sessions) | https://platform.zasya.online/admin.html |
+| Coach Position (model) | [docs/coach-position/](docs/coach-position/) — planned host https://coach-position.zasya.online |
+| Coach Position (app) | [coach-position/](coach-position/) — local `:3001`, Cloudflare DNS in [coach-position/INFRA.md](coach-position/INFRA.md) |
 
 Admin key default: `chz-ops` (override with `ADMIN_KEY` on deploy / Lambda env).
 

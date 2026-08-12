@@ -1,0 +1,32 @@
+{
+  "stationCode": "CHZ",
+  "stationName": "Charlapalli",
+  "bogieLengthMeters": 25,
+  "showBeforeMinutes": 10,
+  "hideAfterDepartMinutes": 15,
+  "languages": ["en", "te", "hi"],
+  "displays": [
+    {
+      "id": "entrance-main",
+      "name": "Main entrance TV",
+      "mode": "dual",
+      "platformsShown": ["1", "2"],
+      "youAreHere": {
+        "platform": "1",
+        "metersFromEngineEnd": 75,
+        "facing": "engine_left"
+      }
+    },
+    {
+      "id": "pf2-mid",
+      "name": "Platform 2 mid",
+      "mode": "single",
+      "platformsShown": ["2"],
+      "youAreHere": {
+        "platform": "2",
+        "metersFromEngineEnd": 50,
+        "facing": "engine_left"
+      }
+    }
+  ]
+}

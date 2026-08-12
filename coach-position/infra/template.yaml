@@ -1,0 +1,243 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Railway Coach Position display (S3 + CloudFront + API + Lambda)
+
+Parameters:
+  LambdaCodeBucket:
+    Type: String
+  LambdaCodeKey:
+    Type: String
+    Default: coach-lambda.zip
+  CustomDomainName:
+    Type: String
+    Default: coach-position.zasya.online
+  CertificateArn:
+    Type: String
+    Default: ''
+  AdminKey:
+    Type: String
+    Default: coach-ops
+    NoEcho: true
+
+Conditions:
+  UseCustomDomain: !Not [!Equals [!Ref CertificateArn, '']]
+
+Resources:
+  SiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  CloudFrontOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: railway-coach-position-oac
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [s3:ListBucket]
+                Resource: !GetAtt SiteBucket.Arn
+              - Effect: Allow
+                Action: [s3:GetObject, s3:PutObject]
+                Resource: !Sub '${SiteBucket.Arn}/*'
+
+  ApiFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: railway-coach-position-api
+      Runtime: nodejs22.x
+      Handler: api.handler
+      Role: !GetAtt LambdaRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref SiteBucket
+          ADMIN_KEY: !Ref AdminKey
+          COACH_USE_NTES: '0'
+      Code:
+        S3Bucket: !Ref LambdaCodeBucket
+        S3Key: !Ref LambdaCodeKey
+
+  RefreshFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: railway-coach-position-refresh
+      Runtime: nodejs22.x
+      Handler: refresh.handler
+      Role: !GetAtt LambdaRole.Arn
+      Timeout: 60
+      MemorySize: 256
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref SiteBucket
+          COACH_USE_NTES: '0'
+      Code:
+        S3Bucket: !Ref LambdaCodeBucket
+        S3Key: !Ref LambdaCodeKey
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: railway-coach-position-api
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowMethods: [GET, POST, OPTIONS]
+        AllowHeaders: [Content-Type, X-Admin-Key]
+
+  ApiIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt ApiFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  DefaultRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'ANY /{proxy+}'
+      Target: !Sub 'integrations/${ApiIntegration}'
+
+  RootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'ANY /'
+      Target: !Sub 'integrations/${ApiIntegration}'
+
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+
+  ApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ApiFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: Railway Coach Position
+        DefaultRootObject: index.html
+        HttpVersion: http2
+        Aliases: !If
+          - UseCustomDomain
+          - [!Ref CustomDomainName]
+          - !Ref AWS::NoValue
+        ViewerCertificate: !If
+          - UseCustomDomain
+          - AcmCertificateArn: !Ref CertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt SiteBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+          - Id: ApiOrigin
+            DomainName: !Sub '${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          ForwardedValues:
+            QueryString: true
+            Cookies:
+              Forward: none
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: ApiOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            ForwardedValues:
+              QueryString: true
+              Headers: [Authorization, X-Admin-Key, Content-Type]
+              Cookies:
+                Forward: none
+            DefaultTTL: 0
+            MinTTL: 0
+            MaxTTL: 0
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SiteBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${SiteBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+
+Outputs:
+  BucketName:
+    Value: !Ref SiteBucket
+  WebsiteURL:
+    Value: !If
+      - UseCustomDomain
+      - !Sub 'https://${CustomDomainName}'
+      - !Sub 'https://${Distribution.DomainName}'
+  CloudFrontDomain:
+    Value: !GetAtt Distribution.DomainName
+  DistributionId:
+    Value: !Ref Distribution
+  ApiUrl:
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'

@@ -1,0 +1,186 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  background: #070f1c;
+  color: #e8edf5;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #12305a, #0a1c36);
+  border-bottom: 4px solid #f97316;
+  flex-shrink: 0;
+}
+
+.header-left { display: flex; align-items: center; gap: 1rem; }
+.logo { width: 3.5rem; height: 3.5rem; border-radius: 50%; object-fit: cover; }
+.header h1 { font-size: clamp(1.6rem, 3.2vw, 2.8rem); letter-spacing: 0.04em; }
+.subtitle { color: #94a3b8; font-size: 0.95rem; margin-top: 0.2rem; }
+.header-right { text-align: right; }
+.clock { font-size: clamp(1.8rem, 3vw, 2.6rem); color: #f97316; font-weight: 700; }
+.clock-date { color: #94a3b8; font-size: 0.95rem; }
+.lang {
+  display: inline-block;
+  margin-top: 0.35rem;
+  color: #f97316;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.board {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  overflow: hidden;
+}
+
+.loading, .idle {
+  margin: auto;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 1.6rem;
+}
+
+.platform-strip {
+  flex: 1;
+  min-height: 0;
+  background: #0d1f38;
+  border: 1px solid #1e3a5f;
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.platform-strip.single { flex: 1; }
+
+.strip-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: clamp(1.1rem, 1.8vw, 1.5rem);
+}
+
+.strip-header strong { color: #f97316; }
+
+.rake-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 8rem;
+}
+
+.rake {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding: 0.5rem 0 1.8rem;
+  scroll-behavior: smooth;
+  animation: rakeIn 0.7s ease-out;
+}
+
+@keyframes rakeIn {
+  from { transform: translateX(-2rem); opacity: 0.2; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.coach {
+  flex: 0 0 auto;
+  width: clamp(7.5rem, 9vw, 11rem);
+  min-height: 7.5rem;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,0.08);
+  background: rgba(8, 16, 32, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.15rem;
+  font-weight: 700;
+  position: relative;
+  padding: 0.35rem 0.25rem 0.4rem;
+  overflow: hidden;
+}
+
+.coach-art {
+  width: 100%;
+  height: auto;
+  max-height: 5.2rem;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
+.coach .code { font-size: 1.05rem; line-height: 1.1; }
+.coach .kind { font-size: 0.65rem; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.04em; color: #94a3b8; }
+
+.coach.pin-aligned {
+  box-shadow: 0 0 0 3px #fbbf24, 0 0 18px rgba(251, 191, 36, 0.45);
+  border-color: #fbbf24;
+}
+
+.pin-row {
+  position: relative;
+  height: 2.4rem;
+}
+
+.you-pin {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  text-align: center;
+  color: #fbbf24;
+  font-weight: 700;
+  animation: bob 1.4s ease-in-out infinite;
+}
+
+.you-pin .arrow { font-size: 1.2rem; line-height: 1; }
+.you-pin .label { font-size: 0.85rem; white-space: nowrap; }
+
+@keyframes bob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-4px); }
+}
+
+.walk-hint {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.unavailable {
+  color: #f87171;
+  font-size: 1.3rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 1.5rem;
+  background: #0a1628;
+  border-top: 1px solid #1e3a5f;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.admin-link { color: #f97316; text-decoration: none; }

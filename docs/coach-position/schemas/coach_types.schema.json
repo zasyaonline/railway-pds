@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coach-position.zasya.online/schemas/coach_types.schema.json",
+  "title": "CoachTypesMap",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "types", "codeRules"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "bogieLengthMetersDefault": { "type": "number", "default": 25 },
+    "types": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/typeDef" }
+    },
+    "codeRules": {
+      "type": "array",
+      "description": "First matching rule wins; evaluate in order",
+      "items": { "$ref": "#/$defs/codeRule" }
+    },
+    "fallbackTypeId": { "type": "string", "default": "unknown" }
+  },
+  "$defs": {
+    "typeDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "asset", "color"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "labelTe": { "type": ["string", "null"] },
+        "labelHi": { "type": ["string", "null"] },
+        "asset": {
+          "type": "string",
+          "description": "Filename under public/img/coaches/"
+        },
+        "color": { "type": "string" }
+      }
+    },
+    "codeRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["match", "typeId"],
+      "properties": {
+        "match": {
+          "type": "string",
+          "description": "Exact code or regex prefixed with re:"
+        },
+        "typeId": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

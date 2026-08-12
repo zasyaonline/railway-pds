@@ -1,0 +1,21 @@
+{
+  "code": "CHZ",
+  "name": "Charlapalli",
+  "platforms": [
+    {
+      "id": "1",
+      "name": "Platform 1",
+      "islandWith": null,
+      "engineStopNote": "Engine towards Secunderabad end (confirm on site)",
+      "lengthMeters": 600
+    },
+    {
+      "id": "2",
+      "name": "Platform 2",
+      "islandWith": null,
+      "engineStopNote": "Confirm facing with station ops",
+      "lengthMeters": 600
+    }
+  ],
+  "notes": "Placeholder layout for modelling; replace after site survey."
+}

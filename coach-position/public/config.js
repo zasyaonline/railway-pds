@@ -1,0 +1,5 @@
+window.COACH_CONFIG = {
+  API_BASE: '',
+  REFRESH_MS: 15000,
+  LANG_ROTATE_MS: 15000
+};

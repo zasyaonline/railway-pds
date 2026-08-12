@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coach Position Admin</title>
+  <link rel="icon" href="/img/favicon.png" type="image/png">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+  <header class="header">
+    <div class="header-left">
+      <img src="/img/ir-logo.png" alt="" class="logo">
+      <h1>Coach Position Admin</h1>
+    </div>
+  </header>
+  <main class="admin-main">
+    <section id="gate" class="gate">
+      <label>Admin key</label>
+      <div class="row">
+        <input id="adminKey" type="password" placeholder="coach-ops">
+        <button type="button" id="btnUnlock" class="btn">Open</button>
+      </div>
+      <p class="hint">Default key: <code>coach-ops</code></p>
+      <p id="gateError" class="error" hidden></p>
+    </section>
+
+    <section id="panel" hidden>
+      <p>Station: <strong id="stationCode">—</strong>
+        · <a id="previewLink" href="/?display=entrance-main" target="_blank">Open display</a>
+      </p>
+      <div id="list" class="list"></div>
+
+      <h2>Edit / create display</h2>
+      <div class="form">
+        <label>id <input id="fId" placeholder="entrance-main"></label>
+        <label>name <input id="fName" placeholder="Main entrance TV"></label>
+        <label>mode
+          <select id="fMode"><option value="dual">dual</option><option value="single">single</option></select>
+        </label>
+        <label>platforms (comma) <input id="fPlatforms" placeholder="1,2"></label>
+        <label>youAreHere platform <input id="fPinPf" placeholder="1"></label>
+        <label>metres from engine <input id="fMetres" type="number" placeholder="75"></label>
+        <label>facing
+          <select id="fFacing">
+            <option value="engine_left">engine_left</option>
+            <option value="engine_right">engine_right</option>
+          </select>
+        </label>
+        <button type="button" id="btnSave" class="btn">Save display</button>
+      </div>
+      <p id="status" class="status" hidden></p>
+    </section>
+  </main>
+  <script src="/config.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
