@@ -41,7 +41,12 @@ window.COACH_I18N = {
     cancelled: 'Cancelled',
     diverted: 'Diverted',
     lateBy: 'Late by {n} mins',
-    footerWindow: 'Window: T−{before} until departure · {bogie}m/bogie · {coaches} coaches'
+    footerWindow: 'Window: T−{before} until departure · {bogie}m/bogie · {coaches} coaches',
+    trainOnPlatform: 'This train is on platform {n}',
+    divyangjanAtPos: 'Divyangjan Coach at Position: {n}',
+    chartView: 'Chart view',
+    tvView: 'TV view',
+    coachPosition: 'Coach Position'
   },
   te: {
     lang: 'తె',
@@ -83,7 +88,12 @@ window.COACH_I18N = {
     cancelled: 'రద్దు',
     diverted: 'మార్గం మార్చబడింది',
     lateBy: '{n} నిమి ఆలస్యం',
-    footerWindow: 'విండో: బయలుదేరేందుకు T−{before} · {bogie}మీ/బోగీ · {coaches} కోచ్‌లు'
+    footerWindow: 'విండో: బయలుదేరేందుకు T−{before} · {bogie}మీ/బోగీ · {coaches} కోచ్‌లు',
+    trainOnPlatform: 'ఈ రైలు ప్లాట్‌ఫామ్ {n}పై ఉంది',
+    divyangjanAtPos: 'దివ్యాంగుల కోచ్ స్థానం: {n}',
+    chartView: 'చార్ట్ వీక్షణ',
+    tvView: 'TV వీక్షణ',
+    coachPosition: 'కోచ్ స్థానం'
   },
   hi: {
     lang: 'हि',
@@ -125,7 +135,12 @@ window.COACH_I18N = {
     cancelled: 'रद्द',
     diverted: 'मार्ग परिवर्तित',
     lateBy: '{n} मिनट विलंब',
-    footerWindow: 'विंडो: प्रस्थान तक T−{before} · {bogie}मी/बोगी · {coaches} कोच'
+    footerWindow: 'विंडो: प्रस्थान तक T−{before} · {bogie}मी/बोगी · {coaches} कोच',
+    trainOnPlatform: 'यह ट्रेन प्लेटफ़ॉर्म {n} पर है',
+    divyangjanAtPos: 'दिव्यांगजन कोच स्थिति: {n}',
+    chartView: 'चार्ट व्यू',
+    tvView: 'TV व्यू',
+    coachPosition: 'कोच स्थिति'
   }
 };
 

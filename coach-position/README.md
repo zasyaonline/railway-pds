@@ -46,6 +46,15 @@ GitHub Action `.github/workflows/coach-refresh.yml` runs the cache job every 5 m
 
 Language rotates EN → TE → HI every 15s (chrome, status, coach type labels, station names from `data/stations.json`).
 
+Two views share the same live cache:
+
+- TV (dark PDS board): `/?display=entrance-main`
+- Chart (NTES-style rake + traveller + walk): `/chart.html?display=entrance-main`
+
+The traveller pin and walk distance/time always show on the featured rake from the display’s entrance position. If that train is on the other platform, a note says so — the pin is not hidden.
+
+The TV layout follows **viewport height**, not OS. Below ~800px CSS height the station table shrinks (and hides below ~600px) so the rake, traveller, and walk labels stay on screen. Windows 125–150% scaling is the usual short-viewport case.
+
 ## Admin
 
 1. Open `http://localhost:3001/admin.html` (key `coach-ops`). The live CloudFront admin cannot call NTES.

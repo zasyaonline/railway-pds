@@ -33,7 +33,8 @@ function buildPlatformStrip({
   typesDoc,
   bogie,
   stationLayout,
-  showPin
+  showPin,
+  alwaysPin
 }) {
   if (!picked) {
     return {
@@ -52,7 +53,9 @@ function buildPlatformStrip({
   const { coaches: coachesMapped, source, pwdPositions } = resolveCoaches(t, typesDoc);
 
   const pinCfg =
-    showPin && display.youAreHere && String(display.youAreHere.platform) === String(pf)
+    showPin &&
+    display.youAreHere &&
+    (alwaysPin || String(display.youAreHere.platform) === String(pf))
       ? { ...display.youAreHere, facing: display.youAreHere.facing || 'engine_left' }
       : null;
 
@@ -181,7 +184,8 @@ async function buildCoachBoard({
       typesDoc,
       bogie,
       stationLayout,
-      showPin: true
+      showPin: true,
+      alwaysPin: true
     });
     focus.featured = true;
   }

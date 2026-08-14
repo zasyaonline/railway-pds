@@ -22,6 +22,20 @@ function $(id) { return document.getElementById(id); }
 function qs(name) {
   return new URLSearchParams(location.search).get(name);
 }
+const THEME = String(
+  qs('theme') || (document.body.classList.contains('theme-chart') ? 'chart' : 'tv')
+).toLowerCase();
+if (THEME === 'chart') document.body.classList.add('theme-chart');
+
+function applyViewportMode() {
+  const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  document.body.dataset.vh = h < 600 ? 'tiny' : h < 800 ? 'short' : 'full';
+}
+applyViewportMode();
+window.addEventListener('resize', applyViewportMode);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', applyViewportMode);
+}
 function getSessionId() {
   try {
     let id = localStorage.getItem(SESSION_KEY);
@@ -73,8 +87,9 @@ function currentLang() {
   return languages[langIndex] || 'en';
 }
 function t(key) {
-  const dict = (window.COACH_I18N && window.COACH_I18N[currentLang()]) || (window.COACH_I18N && window.COACH_I18N.en) || {};
-  const en = (window.COACH_I18N && window.COACH_I18N.en) || {};
+  const pack = window.COACH_I18N || {};
+  const dict = pack[currentLang()] || pack.en || {};
+  const en = pack.en || {};
   return dict[key] || en[key] || key;
 }
 function locale() {
@@ -160,8 +175,8 @@ function pickLiveFocus(payload, now = new Date()) {
 
 function resolveClientPin(display, platform, coaches, bogie) {
   const cfg = display?.youAreHere;
-  if (!cfg || String(cfg.platform) !== String(platform) || !(coaches || []).length) {
-    return { enabled: false, slotIndex: null, platform: String(platform) };
+  if (!cfg || !(coaches || []).length) {
+    return { enabled: false, slotIndex: null, platform: String(platform), samePlatform: false };
   }
   const bogieM = bogie || BOGIE_DEFAULT;
   let slot =
@@ -173,6 +188,8 @@ function resolveClientPin(display, platform, coaches, bogie) {
     enabled: true,
     slotIndex: slot,
     platform: String(platform),
+    configuredPlatform: String(cfg.platform || ''),
+    samePlatform: String(cfg.platform) === String(platform),
     facing: cfg.facing || 'engine_left',
     metersFromEngineEnd: cfg.metersFromEngineEnd
   };
@@ -247,6 +264,7 @@ function updateClock() {
 
 function coachAsset(typeId) {
   const id = typeId || 'unknown';
+  if (THEME === 'chart') return `/img/chart/${id}.svg`;
   const types = (typesDoc && typesDoc.types) || {};
   const asset = (types[id] && types[id].asset) || `${id}.png`;
   return `/img/coaches/${asset}`;
@@ -329,11 +347,12 @@ function coachTile(coach, pinSlot) {
     typeMeta.label ||
     typeId;
   const code = String(coach.label || coach.code || '');
-  const showKind = kind && kind.toUpperCase() !== code.toUpperCase();
+  const showKind = THEME !== 'chart' && kind && kind.toUpperCase() !== code.toUpperCase();
+  const shown = THEME === 'chart' ? pos + 1 : pos;
   const divClass = coach.divyangjan ? ' divyangjan' : '';
   return `
     <div class="coach ${typeId}${aligned ? ' pin-aligned' : ''}${divClass}" data-pos="${pos}">
-      <span class="num" title="${t('coachNo')} ${pos}">${pos}</span>
+      <span class="num" title="${t('coachNo')} ${shown}">${shown}</span>
       ${coach.divyangjan ? `<span class="divyang-badge" title="${t('divyangjan')}">♿</span>` : ''}
       <img class="coach-art" src="${coachAsset(typeId)}" alt="${esc(code)}" draggable="false">
       <span class="code">${esc(code)}</span>
@@ -393,6 +412,15 @@ function divyangjanBanner(p) {
   const list = p.divyangjanCoaches || [];
   if (!list.length) {
     return `<div class="divyangjan-banner muted" role="status">♿ ${esc(t('divyangjanNone'))}</div>`;
+  }
+  if (THEME === 'chart') {
+    const bits = list
+      .map((c) => {
+        const n = (c.position != null ? c.position : 0) + 1;
+        return `${esc(t('divyangjanAtPos').replace('{n}', String(n)))} (${esc(c.code)})`;
+      })
+      .join(' · ');
+    return `<div class="divyangjan-banner" role="status">♿ ${bits}</div>`;
   }
   const bits = list
     .map((c) => `${esc(t('divyangjanAt'))} <strong>${c.position}</strong> (${esc(c.code)})`)
@@ -514,9 +542,10 @@ function renderFocus(p, bogie, shouldArrive) {
   const arriveClass = shouldArrive ? 'is-arriving' : '';
   const rakeClass = `rake ${engineOnRight ? 'engine-right' : 'engine-left'} ${arriveClass}`.trim();
   const count = p.coaches.length;
-  const pinNote = !p.youAreHere?.enabled
-    ? `<p class="pin-note">${t('goToPlatform')}</p>`
-    : '';
+  const pinNote =
+    p.youAreHere?.enabled && p.youAreHere.samePlatform === false
+      ? `<p class="pin-note">${t('trainOnPlatform').replace('{n}', esc(p.platform))}</p>`
+      : '';
 
   return `
     <section class="focus-panel">
@@ -548,7 +577,11 @@ function render(payload) {
   }
 
   const title = locStation(payload.stationName || payload.stationCode || 'Station');
-  $('stationTitle').textContent = String(title).toUpperCase();
+  if (THEME === 'chart') {
+    $('stationTitle').textContent = `${t('coachPosition')} | ${String(payload.stationCode || title).toUpperCase()}`;
+  } else {
+    $('stationTitle').textContent = String(title).toUpperCase();
+  }
   document.title = `${title} — Coach Position`;
   document.documentElement.lang = currentLang();
   $('displayName').textContent = payload.display?.name
@@ -556,6 +589,17 @@ function render(payload) {
     : '';
   const adminLink = document.querySelector('.admin-link');
   if (adminLink) adminLink.textContent = t('admin');
+  const themeLink = $('themeLink');
+  if (themeLink) {
+    const displayId = qs('display') || 'entrance-main';
+    if (THEME === 'chart') {
+      themeLink.href = `/?display=${encodeURIComponent(displayId)}`;
+      themeLink.textContent = t('tvView');
+    } else {
+      themeLink.href = `/chart.html?display=${encodeURIComponent(displayId)}`;
+      themeLink.textContent = t('chartView');
+    }
+  }
 
   const pick = pickLiveFocus(payload);
   const focus = assembleFocus(payload, pick);
