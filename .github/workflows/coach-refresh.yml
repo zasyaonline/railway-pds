@@ -1,5 +1,9 @@
 name: Refresh Coach Position cache
 
+# Backup poller. Primary is railway-pds-CHZ-refresh writing
+# data/stations/{CODE}/board.json. Disable this schedule once the Lambda
+# loop is proven, so two pollers do not fight.
+
 on:
   schedule:
     - cron: '*/5 * * * *'

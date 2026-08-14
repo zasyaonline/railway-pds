@@ -17,6 +17,10 @@ Parameters:
     Type: String
     Default: coach-ops
     NoEcho: true
+  PdsLambdaRoleArn:
+    Type: String
+    Default: arn:aws:iam::884000107109:role/railway-pds-chz-LambdaRole-VqR4GQtL5NPA
+    Description: PDS refresh/API role — granted read/write on coach board cache
 
 Conditions:
   UseCustomDomain: !Not [!Equals [!Ref CertificateArn, '']]
@@ -218,7 +222,8 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Effect: Allow
+          - Sid: AllowCloudFrontOAC
+            Effect: Allow
             Principal:
               Service: cloudfront.amazonaws.com
             Action: s3:GetObject
@@ -226,6 +231,21 @@ Resources:
             Condition:
               StringEquals:
                 AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+          - Sid: AllowPdsLambdaCoachPoller
+            Effect: Allow
+            Principal:
+              AWS: !Ref PdsLambdaRoleArn
+            Action:
+              - s3:ListBucket
+            Resource: !GetAtt SiteBucket.Arn
+          - Sid: AllowPdsLambdaCoachObjects
+            Effect: Allow
+            Principal:
+              AWS: !Ref PdsLambdaRoleArn
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+            Resource: !Sub '${SiteBucket.Arn}/*'
 
 Outputs:
   BucketName:

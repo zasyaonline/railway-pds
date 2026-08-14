@@ -38,7 +38,7 @@
       <p id="stationHint" class="status" hidden></p>
 
       <p style="margin-top:1.25rem">Displays for <strong id="stationCode">—</strong>
-        · <a id="previewLink" href="/?display=entrance-main" target="_blank">Open display</a>
+        · <a id="previewLink" href="/?station=BG&display=entrance-main" target="_blank">Open display</a>
       </p>
       <div id="list" class="list"></div>
 
@@ -68,8 +68,8 @@
       <p class="hint">
         A session is a browser tab on the display. Idle tabs drop off after ~90s.
         Stopping a session blanks that TV. Session control needs the local API
-        (<code>localhost:3001</code>) or a future API Lambda — the CloudFront-only site
-        cannot list or stop sessions.
+        (<code>localhost:3001</code>). CloudFront TVs read per-station JSON; Save uses the
+        cloud Coach API.
       </p>
 
       <h2>Edit / create display</h2>
@@ -94,6 +94,6 @@
     </section>
   </main>
   <script src="/config.js"></script>
-  <script src="/js/admin.js"></script>
+  <script src="/js/admin.js?v=20260814f"></script>
 </body>
 </html>

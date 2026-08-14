@@ -24,7 +24,7 @@ app.get('/admin', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Coach Position display: http://localhost:${PORT}/?display=entrance-main`);
+  console.log(`Coach Position display: http://localhost:${PORT}/?station=BG&display=entrance-main`);
   console.log(`Admin: http://localhost:${PORT}/admin.html (key: coach-ops)`);
   console.log('Data source: NTES Live Station (halts only — no demo board)');
 });

@@ -7,6 +7,17 @@ const { buildCoachBoard } = require('../services/boardBuilder');
 const { fetchLiveStationBoard } = require('../services/liveBoardService');
 const { resolveStationFromNtes } = require('../../services/ntesClient');
 const {
+  DEFAULT_STATION,
+  INDEX_REL,
+  LEGACY_DISPLAYS,
+  normalizeStation,
+  stationRel,
+  emptyDisplaysDoc,
+  withDefaultDisplay,
+  upsertIndex,
+  overlayDisplay
+} = require('../services/stationStore');
+const {
   emptyStore,
   touchSession,
   listActive,
@@ -28,7 +39,9 @@ function createApiRouter(deps) {
   }
 
   function writeJson(name, doc) {
-    fs.writeFileSync(path.join(dataDir, name), JSON.stringify(doc, null, 2));
+    const full = path.join(dataDir, name);
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, JSON.stringify(doc, null, 2) + '\n');
   }
 
   function readSessions() {
@@ -72,12 +85,33 @@ function createApiRouter(deps) {
     return true;
   }
 
+  function loadDisplaysDoc(code) {
+    const rel = stationRel(code);
+    const per = readJson(rel.displays, null);
+    if (per) return per;
+    if (rel.code === DEFAULT_STATION) {
+      const legacy = readJson(LEGACY_DISPLAYS, null);
+      if (legacy) return legacy;
+    }
+    return emptyDisplaysDoc(rel.code);
+  }
+
+  function saveDisplaysDoc(doc) {
+    const rel = stationRel(doc.stationCode);
+    writeJson(rel.displays, doc);
+    const index = readJson(INDEX_REL, { stations: [] });
+    writeJson(INDEX_REL, upsertIndex(index, rel.code));
+    if (rel.code === DEFAULT_STATION) writeJson(LEGACY_DISPLAYS, doc);
+  }
+
   router.get('/health', (req, res) => {
-    const displays = readJson('coach_displays.json', { displays: [] });
+    const displays = loadDisplaysDoc(req.query.station || DEFAULT_STATION);
+    const index = readJson(INDEX_REL, { stations: [displays.stationCode].filter(Boolean) });
     res.json({
       status: 'ok',
       app: 'coach-position',
       stationCode: displays.stationCode || null,
+      stations: index.stations || [],
       dataSource: 'ntes-live',
       displayCount: (displays.displays || []).length,
       activeSessions: listActive(readSessions()).length
@@ -86,17 +120,18 @@ function createApiRouter(deps) {
 
   router.get('/coach-board', async (req, res) => {
     if (!registerViewer(req, res)) return;
-    const displaysDoc = readJson('coach_displays.json', null);
+    const code = normalizeStation(req.query.station);
+    const displaysDoc = withDefaultDisplay(loadDisplaysDoc(code));
+    displaysDoc.stationCode = code;
     const typesDoc = readJson('coach_types.json', { types: {}, codeRules: [] });
-    if (!displaysDoc) return res.status(503).json({ error: 'Config missing' });
-
     const displayId = req.query.display || displaysDoc.displays?.[0]?.id;
-    const stationLayout = readJson('station_layout.json', null);
+    const stationLayout =
+      readJson(stationRel(code).layout, null) || readJson('station_layout.json', null);
     const hours = displaysDoc.lookAheadHours || Number(process.env.COACH_LOOKAHEAD_HOURS) || 4;
 
     let live;
     try {
-      live = await fetchLiveStationBoard(displaysDoc.stationCode, { lookAheadHours: hours });
+      live = await fetchLiveStationBoard(code, { lookAheadHours: hours });
     } catch (err) {
       return res.status(502).json({
         error: 'ntes_live_unavailable',
@@ -104,7 +139,6 @@ function createApiRouter(deps) {
       });
     }
 
-    // Prefer NTES station name when config name is missing / generic
     if (live.stationName && (!displaysDoc.stationName || displaysDoc.stationName === displaysDoc.stationCode)) {
       displaysDoc.stationName = live.stationName;
     }
@@ -121,6 +155,7 @@ function createApiRouter(deps) {
     if (result.error) return res.status(result.status || 500).json(result);
     result.body.liveFetchedAt = live.fetchedAt;
     result.body.liveTrainCount = live.trains.length;
+    writeJson(stationRel(code).board, result.body);
     res.set('Cache-Control', 'no-store');
     res.json(result.body);
   });
@@ -161,26 +196,22 @@ function createApiRouter(deps) {
     res.json(result);
   });
 
-  router.get('/admin/displays', (req, res) => {
+  async function handleGetDisplays(req, res) {
     if (!requireAdmin(req, res)) return;
-    const doc = readJson('coach_displays.json', { displays: [] });
-    res.json(doc);
-  });
+    const code = normalizeStation(req.query.station || req.query.stationCode);
+    res.json(loadDisplaysDoc(code));
+  }
 
-  router.post('/admin/displays', async (req, res) => {
+  async function handleSaveDisplays(req, res) {
     if (!requireAdmin(req, res)) return;
     const body = req.body || {};
-    const doc = readJson('coach_displays.json', {
-      stationCode: 'BG',
-      bogieLengthMeters: 25,
-      showBeforeMinutes: 10,
-      hideAfterDepartMinutes: 0,
-      languages: ['en', 'te', 'hi'],
-      displays: []
-    });
+    const code = normalizeStation(
+      body.stationCode || req.query.station || req.query.stationCode
+    );
+    const doc = withDefaultDisplay(loadDisplaysDoc(code));
+    doc.stationCode = code;
 
-    if (body.stationCode) {
-      const code = String(body.stationCode).trim().toUpperCase();
+    if (body.stationCode || body.stationName) {
       const resolved = await resolveStationName(code, body.stationName);
       if (!resolved.ok) return res.status(400).json({ error: resolved.error });
       doc.stationCode = resolved.stationCode;
@@ -194,42 +225,35 @@ function createApiRouter(deps) {
     if (typeof body.lookAheadHours === 'number') doc.lookAheadHours = body.lookAheadHours;
     if (Array.isArray(body.languages)) doc.languages = body.languages;
 
-    if (!body.display) {
-      writeJson('coach_displays.json', doc);
-      return res.json({
-        ok: true,
-        stationCode: doc.stationCode,
-        stationName: doc.stationName,
-        displays: doc.displays
-      });
+    if (body.display) {
+      const display = body.display;
+      if (!display.id) return res.status(400).json({ error: 'display.id required' });
+      const id = String(display.id).toLowerCase();
+      const next = {
+        id,
+        name: display.name || id,
+        mode: display.mode === 'single' ? 'single' : 'dual',
+        platformsShown: (display.platformsShown || []).map(String),
+        youAreHere: display.youAreHere || undefined
+      };
+      const idx = (doc.displays || []).findIndex((d) => d.id === id);
+      if (idx >= 0) doc.displays[idx] = { ...doc.displays[idx], ...next };
+      else doc.displays.push(next);
     }
 
-    const display = body.display;
-    if (!display || !display.id) {
-      return res.status(400).json({ error: 'display.id required' });
-    }
-
-    const id = String(display.id).toLowerCase();
-    const next = {
-      id,
-      name: display.name || id,
-      mode: display.mode === 'single' ? 'single' : 'dual',
-      platformsShown: (display.platformsShown || []).map(String),
-      youAreHere: display.youAreHere || undefined
-    };
-
-    const idx = (doc.displays || []).findIndex((d) => d.id === id);
-    if (idx >= 0) doc.displays[idx] = { ...doc.displays[idx], ...next };
-    else doc.displays.push(next);
-
-    writeJson('coach_displays.json', doc);
+    saveDisplaysDoc(doc);
     res.json({
       ok: true,
       stationCode: doc.stationCode,
       stationName: doc.stationName,
       displays: doc.displays
     });
-  });
+  }
+
+  router.get('/admin/displays', handleGetDisplays);
+  router.post('/admin/displays', handleSaveDisplays);
+  router.get('/coach/displays', handleGetDisplays);
+  router.post('/coach/displays', handleSaveDisplays);
 
   router.get('/admin/sessions', (req, res) => {
     if (!requireAdmin(req, res)) return;
@@ -260,6 +284,16 @@ function createApiRouter(deps) {
 
   router.get('/coach-types', (req, res) => {
     res.json(readJson('coach_types.json', {}));
+  });
+
+  router.get('/coach/board', (req, res) => {
+    const code = normalizeStation(req.query.station);
+    const rel = stationRel(code);
+    const board =
+      readJson(rel.board, null) ||
+      (code === DEFAULT_STATION ? readJson('coach_board_cache.json', null) : null);
+    if (!board) return res.status(404).json({ error: `No board cache for ${code}` });
+    res.json(overlayDisplay(board, loadDisplaysDoc(code), req.query.display));
   });
 
   return router;

@@ -22,12 +22,13 @@ async function getJson(bucket, key) {
   return JSON.parse(body);
 }
 
-async function putJson(bucket, key, data) {
+async function putJson(bucket, key, data, options = {}) {
   await client.send(new PutObjectCommand({
     Bucket: bucket,
     Key: key,
     Body: JSON.stringify(data, null, 2),
-    ContentType: 'application/json'
+    ContentType: 'application/json',
+    CacheControl: options.cacheControl || undefined
   }));
 }
 

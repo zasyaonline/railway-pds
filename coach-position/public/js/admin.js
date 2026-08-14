@@ -3,10 +3,28 @@
 const API_BASE = (window.COACH_CONFIG && window.COACH_CONFIG.API_BASE) || '';
 const LOOKUP_BASE = (window.COACH_CONFIG && window.COACH_CONFIG.LOOKUP_BASE) || API_BASE;
 const KEY_STORAGE = 'coach_admin_key';
+const DEFAULT_STATION = 'BG';
+const DEFAULT_DISPLAY = 'entrance-main';
 let adminKey = '';
 let doc = null;
 
 function $(id) { return document.getElementById(id); }
+
+function isLocalHost() {
+  return /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+}
+
+function writeApiBase() {
+  if (API_BASE) return API_BASE;
+  if (isLocalHost()) return '';
+  return LOOKUP_BASE || '';
+}
+
+function previewHref(station, display) {
+  const code = (station || doc?.stationCode || DEFAULT_STATION).trim().toUpperCase();
+  const id = display || DEFAULT_DISPLAY;
+  return `/?station=${encodeURIComponent(code)}&display=${encodeURIComponent(id)}`;
+}
 
 function showStatus(msg, ok = true) {
   const status = $('status');
@@ -60,8 +78,15 @@ async function api(path, options = {}) {
     options.headers || {}
   );
   const sep = path.includes('?') ? '&' : '?';
-  const url = `${API_BASE}${path}${sep}adminKey=${encodeURIComponent(adminKey)}`;
+  const base = writeApiBase();
+  const url = `${base}${path}${sep}adminKey=${encodeURIComponent(adminKey)}`;
   const res = await fetch(url, Object.assign({}, options, { headers }));
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const err = new Error('Coach API is not available on this host');
+    err.status = res.status;
+    throw err;
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error(data.error || `HTTP ${res.status}`);
@@ -101,15 +126,24 @@ function renderList() {
       $('fPinPf').value = d.youAreHere?.platform || '';
       $('fMetres').value = d.youAreHere?.metersFromEngineEnd ?? '';
       $('fFacing').value = d.youAreHere?.facing || 'engine_left';
-      $('previewLink').href = `/?display=${encodeURIComponent(d.id)}`;
+      $('previewLink').href = previewHref(doc.stationCode, d.id);
     });
   });
 }
 
 async function loadStaticDisplays() {
-  const res = await fetch('/data/coach_displays.json', { cache: 'no-store' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  const code = ($('fStationCode')?.value || DEFAULT_STATION).trim().toUpperCase() || DEFAULT_STATION;
+  const urls = [
+    `/data/stations/${code}/displays.json`,
+    code === DEFAULT_STATION ? '/data/coach_displays.json' : null,
+    '/data/coach_displays.json'
+  ].filter(Boolean);
+  for (const url of urls) {
+    const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
+    const ct = res.headers.get('content-type') || '';
+    if (res.ok && ct.includes('application/json')) return res.json();
+  }
+  throw new Error('No display config found');
 }
 
 async function unlock() {
@@ -117,7 +151,10 @@ async function unlock() {
   $('gateError').hidden = true;
   hasApi = false;
   try {
-    doc = await api('/api/admin/displays');
+    doc = await api(`/api/coach/displays?station=${encodeURIComponent($('fStationCode').value.trim() || DEFAULT_STATION)}`);
+    if (!doc || !Array.isArray(doc.displays)) {
+      throw Object.assign(new Error('Coach API is not available on this host'), { status: 503 });
+    }
     hasApi = true;
   } catch (err) {
     if (err.status === 401) {
@@ -143,7 +180,7 @@ async function unlock() {
   sessionPoll = setInterval(loadSessions, 10000);
   if (!hasApi) {
     showStationHint(
-      `NTES lookup works here. To save a station and refresh the TV cache, use ${localAdminUrl()}.`,
+      'NTES lookup works here. Save needs the cloud Coach API (PDS Lambda) or local :3001.',
       false
     );
   }
@@ -184,21 +221,29 @@ async function searchStation() {
   showStationHint('Looking up NTES…');
   try {
     let data;
-    if (hasApi) {
+    const useRemoteLookup = Boolean(LOOKUP_BASE) && (!hasApi || !API_BASE);
+    if (hasApi && !useRemoteLookup) {
       data = await api(`/api/admin/station-lookup?code=${encodeURIComponent(code)}`);
     } else {
       const res = await fetch(
         `${LOOKUP_BASE}/api/station-lookup?code=${encodeURIComponent(code)}`,
         { cache: 'no-store', headers: { Accept: 'application/json' } }
       );
-      data = await res.json().catch(() => ({}));
+      const contentType = res.headers.get('content-type') || '';
+      data = contentType.includes('application/json')
+        ? await res.json().catch(() => ({}))
+        : {};
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     }
-    $('fStationName').value = data.stationName || '';
+    const name = data.stationName || data.StationName || data.name || '';
+    if (!name) {
+      throw new Error(data.error || `NTES did not return a name for ${code}`);
+    }
+    $('fStationName').value = name;
     searchedCode = data.stationCode || code;
     $('fStationCode').value = searchedCode;
     const trains = data.trainCount != null ? ` · ${data.trainCount} trains on the live board` : '';
-    showStationHint(`Found ${data.stationName}${trains}. Click Save station, then Open display.`);
+    showStationHint(`Found ${name}${trains}. Click Save station, then Open display.`);
   } catch (err) {
     $('fStationName').value = '';
     searchedCode = '';
@@ -219,7 +264,7 @@ $('btnSaveStation').addEventListener('click', async () => {
   }
   if (!hasApi) {
     showStationHint(
-      `Name is filled from NTES. Save station still needs ${localAdminUrl()} (CloudFront cannot write the live config). Then Open display.`,
+      'Name is filled from NTES. Save still needs the cloud Coach API (PDS Lambda) or local :3001.',
       false
     );
     return;
@@ -229,7 +274,7 @@ $('btnSaveStation').addEventListener('click', async () => {
     if (!$('fStationName').value.trim()) return;
   }
   try {
-    const result = await api('/api/admin/displays', {
+    const result = await api('/api/coach/displays', {
       method: 'POST',
       body: JSON.stringify({
         stationCode: code,
@@ -268,7 +313,7 @@ $('btnSave').addEventListener('click', async () => {
           }
         : undefined
     };
-    const result = await api('/api/admin/displays', {
+    const result = await api('/api/coach/displays', {
       method: 'POST',
       body: JSON.stringify({
         stationCode: $('fStationCode').value.trim(),
@@ -281,7 +326,7 @@ $('btnSave').addEventListener('click', async () => {
     doc.stationName = result.stationName || doc.stationName;
     renderList();
     showStatus('Saved');
-    $('previewLink').href = `/?display=${encodeURIComponent(display.id)}`;
+    $('previewLink').href = previewHref(doc.stationCode, display.id);
   } catch (err) {
     showStatus(err.message, false);
   }

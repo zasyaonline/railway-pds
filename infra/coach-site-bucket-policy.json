@@ -1,0 +1,37 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowCloudFrontOAC",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+      },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::railway-coach-position-site-884000107109/*",
+      "Condition": {
+        "StringEquals": {
+          "AWS:SourceArn": "arn:aws:cloudfront::884000107109:distribution/E12U4PGOD25ISI"
+        }
+      }
+    },
+    {
+      "Sid": "AllowPdsLambdaCoachPoller",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::884000107109:role/railway-pds-chz-LambdaRole-VqR4GQtL5NPA"
+      },
+      "Action": ["s3:ListBucket"],
+      "Resource": "arn:aws:s3:::railway-coach-position-site-884000107109"
+    },
+    {
+      "Sid": "AllowPdsLambdaCoachObjects",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::884000107109:role/railway-pds-chz-LambdaRole-VqR4GQtL5NPA"
+      },
+      "Action": ["s3:GetObject", "s3:PutObject"],
+      "Resource": "arn:aws:s3:::railway-coach-position-site-884000107109/*"
+    }
+  ]
+}

@@ -197,6 +197,7 @@ async function buildCoachBoard({
     dataSource: dataSource || 'ntes-live',
     showBeforeMinutes: showBefore,
     hideAfterDepartMinutes: hideAfter,
+    lookAheadHours: displaysDoc.lookAheadHours ?? 4,
     bogieLengthMeters: bogie,
     walkSpeedMps: 0.65,
     languages: displaysDoc.languages || ['en', 'te', 'hi'],

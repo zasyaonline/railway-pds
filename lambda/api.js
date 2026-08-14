@@ -83,6 +83,84 @@ function requireAdmin(event) {
   return Boolean(provided && provided === expected);
 }
 
+function requireCoachAdmin(event) {
+  const expected = process.env.COACH_ADMIN_KEY || 'coach-ops';
+  const fromHeader = header(event, 'x-admin-key') || '';
+  const qs = event.queryStringParameters || {};
+  const provided = fromHeader || qs.adminKey || qs.key || '';
+  return Boolean(provided && provided === expected);
+}
+
+function loadStationStore() {
+  try {
+    return require('./coach-services/stationStore');
+  } catch {
+    return require('../coach-position/services/stationStore');
+  }
+}
+
+function coachBucketName() {
+  return process.env.COACH_BUCKET || '';
+}
+
+function isS3AccessError(err) {
+  const msg = String(err && (err.message || err.name) || '');
+  return /not authorized|AccessDenied|ExplicitDeny|Access Denied/i.test(msg);
+}
+
+async function loadCoachDisplays(bucket, code) {
+  const store = loadStationStore();
+  const rel = store.stationRel(code);
+  try {
+    return await getJson(bucket, store.s3Key(rel.displays));
+  } catch (err) {
+    if (isS3AccessError(err)) throw err;
+    if (rel.code === store.DEFAULT_STATION) {
+      try {
+        return await getJson(bucket, store.s3Key(store.LEGACY_DISPLAYS));
+      } catch (err2) {
+        if (isS3AccessError(err2)) throw err2;
+      }
+    }
+    return store.emptyDisplaysDoc(rel.code);
+  }
+}
+
+async function saveCoachDisplays(bucket, doc) {
+  const store = loadStationStore();
+  const rel = store.stationRel(doc.stationCode);
+  await putJson(bucket, store.s3Key(rel.displays), doc, {
+    cacheControl: 'public, max-age=60'
+  });
+  let index = { stations: [] };
+  try {
+    index = await getJson(bucket, store.s3Key(store.INDEX_REL));
+  } catch {
+    /* first station */
+  }
+  await putJson(bucket, store.s3Key(store.INDEX_REL), store.upsertIndex(index, rel.code), {
+    cacheControl: 'public, max-age=60'
+  });
+  if (rel.code === store.DEFAULT_STATION) {
+    await putJson(bucket, store.s3Key(store.LEGACY_DISPLAYS), doc, {
+      cacheControl: 'public, max-age=60'
+    });
+  }
+}
+
+async function loadCoachBoard(bucket, code) {
+  const store = loadStationStore();
+  const rel = store.stationRel(code);
+  try {
+    return await getJson(bucket, store.s3Key(rel.board));
+  } catch {
+    if (rel.code === store.DEFAULT_STATION) {
+      return getJson(bucket, store.s3Key(store.LEGACY_BOARD));
+    }
+    throw new Error(`No board cache for ${rel.code}`);
+  }
+}
+
 async function loadSessions(bucket) {
   try {
     return await getJson(bucket, SESSIONS_KEY);
@@ -427,6 +505,94 @@ exports.handler = async (event) => {
         trainCount: ntes.trainCount,
         source: 'ntes'
       });
+    }
+
+    if (path.includes('/coach/displays') || path.endsWith('/coach/displays')) {
+      const coachBucket = coachBucketName();
+      if (!coachBucket) {
+        return respond(503, { error: 'COACH_BUCKET not configured' });
+      }
+      if (!requireCoachAdmin(event)) {
+        return respond(401, { error: 'Admin key required' });
+      }
+      const store = loadStationStore();
+      const qs = event.queryStringParameters || {};
+
+      if (method === 'GET') {
+        const code = store.normalizeStation(qs.station || qs.stationCode || store.DEFAULT_STATION);
+        const doc = await loadCoachDisplays(coachBucket, code);
+        return respond(200, doc);
+      }
+
+      if (method === 'POST') {
+        const body = parseBody(event);
+        const code = store.normalizeStation(
+          body.stationCode || qs.station || qs.stationCode || store.DEFAULT_STATION
+        );
+        const doc = store.withDefaultDisplay(await loadCoachDisplays(coachBucket, code));
+        doc.stationCode = code;
+
+        if (body.stationCode || body.stationName) {
+          const ntes = await resolveStationFromNtes(code);
+          if (ntes.ok) {
+            doc.stationCode = ntes.stationCode;
+            doc.stationName = ntes.stationName || body.stationName || code;
+          } else if (body.stationName) {
+            doc.stationName = String(body.stationName).trim();
+          } else {
+            return respond(400, { error: ntes.error || 'Invalid station code' });
+          }
+        }
+        if (typeof body.bogieLengthMeters === 'number') doc.bogieLengthMeters = body.bogieLengthMeters;
+        if (typeof body.showBeforeMinutes === 'number') doc.showBeforeMinutes = body.showBeforeMinutes;
+        if (typeof body.hideAfterDepartMinutes === 'number') {
+          doc.hideAfterDepartMinutes = body.hideAfterDepartMinutes;
+        }
+        if (typeof body.lookAheadHours === 'number') doc.lookAheadHours = body.lookAheadHours;
+        if (Array.isArray(body.languages)) doc.languages = body.languages;
+
+        if (body.display) {
+          const display = body.display;
+          if (!display.id) return respond(400, { error: 'display.id required' });
+          const id = String(display.id).toLowerCase();
+          const next = {
+            id,
+            name: display.name || id,
+            mode: display.mode === 'single' ? 'single' : 'dual',
+            platformsShown: (display.platformsShown || []).map(String),
+            youAreHere: display.youAreHere || undefined
+          };
+          const idx = (doc.displays || []).findIndex((d) => d.id === id);
+          if (idx >= 0) doc.displays[idx] = { ...doc.displays[idx], ...next };
+          else doc.displays.push(next);
+        }
+
+        await saveCoachDisplays(coachBucket, doc);
+        return respond(200, {
+          ok: true,
+          stationCode: doc.stationCode,
+          stationName: doc.stationName,
+          displays: doc.displays
+        });
+      }
+    }
+
+    if (method === 'GET' && (path.includes('/coach/board') || path.endsWith('/coach/board'))) {
+      const coachBucket = coachBucketName();
+      if (!coachBucket) {
+        return respond(503, { error: 'COACH_BUCKET not configured' });
+      }
+      const store = loadStationStore();
+      const qs = event.queryStringParameters || {};
+      const code = store.normalizeStation(qs.station || qs.stationCode || store.DEFAULT_STATION);
+      const displayId = qs.display || store.DEFAULT_DISPLAY;
+      try {
+        const board = await loadCoachBoard(coachBucket, code);
+        const displaysDoc = await loadCoachDisplays(coachBucket, code);
+        return respond(200, store.overlayDisplay(board, displaysDoc, displayId));
+      } catch (err) {
+        return respond(404, { error: err.message || `No board cache for ${code}` });
+      }
     }
 
     // Default: trains board

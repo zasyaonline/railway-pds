@@ -82,6 +82,14 @@ function pickTrainForPlatform(boardTrains, platform, showBeforeMinutes, hideAfte
   return scored[0] || null;
 }
 
+function hasRake(train) {
+  if (!train) return false;
+  if (train.compositionAvailable === true) return true;
+  if (Array.isArray(train.coaches) && train.coaches.length) return true;
+  if (Array.isArray(train.coachCodes) && train.coachCodes.length) return true;
+  return false;
+}
+
 function nextOutsideWindow(boardTrains, platforms, showBeforeMinutes, hideAfterDepartMinutes, now = new Date()) {
   const shown = new Set();
   for (const pf of platforms) {
@@ -89,7 +97,7 @@ function nextOutsideWindow(boardTrains, platforms, showBeforeMinutes, hideAfterD
     if (hit) shown.add(hit.train.trainNo);
   }
 
-  let best = null;
+  const future = [];
   for (const t of boardTrains || []) {
     if (shown.has(t.trainNo)) continue;
     if (platforms.length && !platforms.includes(String(t.platform))) continue;
@@ -98,19 +106,24 @@ function nextOutsideWindow(boardTrains, platforms, showBeforeMinutes, hideAfterD
     const dep = minutesUntil(t.expectedDeparture || t.scheduledDeparture, now);
     const m = [arr, dep].filter((x) => x != null && x >= 0);
     if (!m.length) continue;
-    const minutesUntilEvent = Math.min(...m);
-    if (!best || minutesUntilEvent < best.minutesUntil) {
-      best = {
-        trainNo: t.trainNo,
-        trainName: t.trainName,
-        platform: String(t.platform),
-        expectedArrival: t.expectedArrival || t.scheduledArrival || null,
-        expectedDeparture: t.expectedDeparture || t.scheduledDeparture || null,
-        minutesUntil: minutesUntilEvent
-      };
-    }
+    future.push({
+      train: t,
+      minutesUntil: Math.min(...m),
+      hasRake: hasRake(t)
+    });
   }
-  return best;
+  future.sort((a, b) => a.minutesUntil - b.minutesUntil);
+  const picked = future.find((x) => x.hasRake) || future[0];
+  if (!picked) return null;
+  const t = picked.train;
+  return {
+    trainNo: t.trainNo,
+    trainName: t.trainName,
+    platform: String(t.platform),
+    expectedArrival: t.expectedArrival || t.scheduledArrival || null,
+    expectedDeparture: t.expectedDeparture || t.scheduledDeparture || null,
+    minutesUntil: picked.minutesUntil
+  };
 }
 
 /**
@@ -168,6 +181,7 @@ module.exports = {
   timeToMinutes,
   minutesUntil,
   hasDeparted,
+  hasRake,
   pickTrainForPlatform,
   nextOutsideWindow,
   pickFocusTrain,

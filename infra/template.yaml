@@ -25,6 +25,15 @@ Parameters:
     Default: chz-ops
     NoEcho: true
     Description: Shared key for /admin.html session controls
+  CoachBucketName:
+    Type: String
+    Default: railway-coach-position-site-884000107109
+    Description: S3 bucket for coach-position TV static site and board cache
+  CoachAdminKey:
+    Type: String
+    Default: coach-ops
+    NoEcho: true
+    Description: Admin key for coach-position display config APIs
 
 Conditions:
   UseCustomDomain: !Not [!Equals [!Ref CertificateArn, '']]
@@ -98,6 +107,19 @@ Resources:
                   - events:EnableRule
                   - events:DisableRule
                 Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/railway-pds-${StationCode}-refresh-schedule'
+        - PolicyName: CoachBucketAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Sub 'arn:aws:s3:::${CoachBucketName}'
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub 'arn:aws:s3:::${CoachBucketName}/*'
 
   # ---------------------------------------------------------------------------
   # Lambda functions
@@ -109,11 +131,12 @@ Resources:
       Runtime: nodejs22.x
       Handler: refresh.handler
       Role: !GetAtt LambdaRole.Arn
-      Timeout: 60
+      Timeout: 300
       MemorySize: 256
       Environment:
         Variables:
           BUCKET_NAME: !Ref PdsBucket
+          COACH_BUCKET: !Ref CoachBucketName
       Code:
         S3Bucket: !Ref LambdaCodeBucket
         S3Key: !Ref LambdaCodeKey
@@ -132,6 +155,8 @@ Resources:
           BUCKET_NAME: !Ref PdsBucket
           REFRESH_RULE_NAME: !Sub 'railway-pds-${StationCode}-refresh-schedule'
           ADMIN_KEY: !Ref AdminKey
+          COACH_BUCKET: !Ref CoachBucketName
+          COACH_ADMIN_KEY: !Ref CoachAdminKey
       Code:
         S3Bucket: !Ref LambdaCodeBucket
         S3Key: !Ref LambdaCodeKey
@@ -244,6 +269,27 @@ Resources:
     Properties:
       ApiId: !Ref HttpApi
       RouteKey: GET /api/station-lookup
+      Target: !Sub 'integrations/${ApiIntegration}'
+
+  CoachDisplaysGetRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /api/coach/displays
+      Target: !Sub 'integrations/${ApiIntegration}'
+
+  CoachDisplaysPostRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /api/coach/displays
+      Target: !Sub 'integrations/${ApiIntegration}'
+
+  CoachBoardRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /api/coach/board
       Target: !Sub 'integrations/${ApiIntegration}'
 
   AdminPlatformsGetRoute:

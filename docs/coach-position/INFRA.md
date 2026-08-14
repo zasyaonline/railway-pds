@@ -10,7 +10,7 @@ Separate public host from the PDS stack so demos and ops never collide.
 | ACM cert | us-east-1 (CloudFront) | **New** ACM cert in us-east-1 for `coach-position.zasya.online` |
 | S3 | Existing PDS bucket | **New** site + data bucket |
 | CloudFront | `EVTX6GW0ROE2O` | **New** distribution |
-| API | Existing HTTP API | **New** HTTP API + Lambdas (board + refresh) |
+| API | Existing HTTP API (`2j7ifmjjyb`) | **Reuses PDS Lambda** (option B): `/api/coach/displays`, `/api/coach/board`. TVs read S3 JSON; no dedicated Coach Lambda. |
 
 DNS must be lowercase: **`coach-position.zasya.online`** (not `Coach-position…`).
 
@@ -31,11 +31,11 @@ Validation CNAME for the ACM certificate will be shown when the cert is requeste
 
 ## Deploy shape (implementation phase)
 
-1. Request/validate ACM certificate for `coach-position.zasya.online` in `us-east-1`.
-2. CloudFormation (or CLI) for S3 + CloudFront + HTTP API + `api` / `refresh` Lambdas + EventBridge schedule.
-3. Sync static app + `data/coach_displays.json`, `data/coach_types.json`.
-4. Invalidate CloudFront; smoke `https://coach-position.zasya.online/api/health` and `/?display=entrance-main`.
-5. Keep **PDS** deploy scripts and distribution untouched.
+1. ACM for `coach-position.zasya.online` in `us-east-1` — done.
+2. S3 + CloudFront for the static TV. Poller + Save on existing PDS Lambdas (`COACH_BUCKET`, IAM on coach bucket).
+3. Sync static app + `data/station_index.json`, `data/stations/{CODE}/*`.
+4. Invalidate CloudFront; smoke `/?station=BG&display=entrance-main`.
+5. Keep **PDS** display URL contract unchanged (`platform.zasya.online` / `/api/trains`).
 
 If IAM boundaries block full stack updates (same as PDS), use direct Lambda zip update + S3 sync + route create + invalidation.
 

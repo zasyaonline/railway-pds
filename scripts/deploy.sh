@@ -82,6 +82,8 @@ aws cloudformation deploy \
     CustomDomainName="$CUSTOM_DOMAIN" \
     CertificateArn="$CERT_ARN" \
     AdminKey="${ADMIN_KEY:-chz-ops}" \
+    CoachBucketName="${COACH_BUCKET_NAME:-railway-coach-position-site-884000107109}" \
+    CoachAdminKey="${COACH_ADMIN_KEY:-coach-ops}" \
   --no-fail-on-empty-changeset
 
 BUCKET=$(aws cloudformation describe-stacks \

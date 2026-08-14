@@ -11,11 +11,18 @@ rm -rf "$DIST/lambda-build" "$DIST/lambda.zip"
 mkdir -p "$DIST/lambda-build"
 
 # Copy handler code
-cp "$LAMBDA_DIR/refresh.js" "$LAMBDA_DIR/api.js" "$DIST/lambda-build/"
+cp "$LAMBDA_DIR/refresh.js" "$LAMBDA_DIR/api.js" "$LAMBDA_DIR/coachRefresh.js" "$DIST/lambda-build/"
 cp -r "$LAMBDA_DIR/lib" "$DIST/lambda-build/"
 
 # Copy shared services (NTES fetch logic)
 cp -r "$ROOT/services" "$DIST/lambda-build/services"
+
+# Coach Position poller + Save (reuse this zip; no dedicated Coach Lambda)
+mkdir -p "$DIST/lambda-build/coach-services"
+cp "$ROOT/coach-position/services/"*.js "$DIST/lambda-build/coach-services/"
+perl -pi -e "s|require\\('../../services/ntesClient'\\)|require('../services/ntesClient')|g" \
+  "$DIST/lambda-build/coach-services/liveBoardService.js" \
+  "$DIST/lambda-build/coach-services/compositionService.js" || true
 
 # Install production dependencies
 cp "$LAMBDA_DIR/package.json" "$DIST/lambda-build/"

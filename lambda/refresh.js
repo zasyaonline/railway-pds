@@ -8,6 +8,7 @@
 
 const { getJson, putJson } = require('./lib/s3');
 const { fetchLiveBoard, STATION_CODE } = require('./services/railwayService');
+const { refreshCoachStations } = require('./coachRefresh');
 
 exports.handler = async () => {
   const bucket = process.env.BUCKET_NAME;
@@ -37,8 +38,21 @@ exports.handler = async () => {
 
   console.log(`[refresh] ${stationCode}: ${boardTrains.length} trains at ${lastUpdated}`);
 
+  let coach = null;
+  try {
+    coach = await refreshCoachStations();
+  } catch (err) {
+    console.error('[refresh] coach poller failed:', err.message);
+    coach = { ok: false, error: err.message };
+  }
+
   return {
     statusCode: 200,
-    body: JSON.stringify({ stationCode, count: boardTrains.length, lastUpdated })
+    body: JSON.stringify({
+      stationCode,
+      count: boardTrains.length,
+      lastUpdated,
+      coach
+    })
   };
 };

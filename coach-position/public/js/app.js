@@ -22,6 +22,44 @@ function $(id) { return document.getElementById(id); }
 function qs(name) {
   return new URLSearchParams(location.search).get(name);
 }
+const DEFAULT_STATION = 'BG';
+const DEFAULT_DISPLAY = 'entrance-main';
+function isLocalHost() {
+  return /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+}
+function stationCode() {
+  return (qs('station') || DEFAULT_STATION).trim().toUpperCase() || DEFAULT_STATION;
+}
+function displayId() {
+  return (qs('display') || DEFAULT_DISPLAY).trim() || DEFAULT_DISPLAY;
+}
+function displayQuery() {
+  return `station=${encodeURIComponent(stationCode())}&display=${encodeURIComponent(displayId())}`;
+}
+function liveApiRoot() {
+  if (API_BASE) return API_BASE;
+  if (isLocalHost()) return '';
+  return null;
+}
+function applyDisplay(payload, displaysDoc) {
+  if (!payload) return payload;
+  const wanted = displayId();
+  const display =
+    (displaysDoc?.displays || []).find((d) => d.id === wanted) ||
+    (displaysDoc?.displays || [])[0] ||
+    payload.display;
+  if (display) {
+    payload.display = {
+      id: display.id,
+      name: display.name,
+      mode: display.mode,
+      platformsShown: display.platformsShown || [],
+      facing: display.youAreHere?.facing || 'engine_left',
+      youAreHere: display.youAreHere || null
+    };
+  }
+  return payload;
+}
 const THEME = String(
   qs('theme') || (document.body.classList.contains('theme-chart') ? 'chart' : 'tv')
 ).toLowerCase();
@@ -119,11 +157,62 @@ function eventTime(train, kind) {
 
 function rowDeparted(row, now, hideAfter) {
   const dep = clockMinutesUntil(eventTime(row, 'dep'), now);
-  if (/depart/i.test(row.status || '') || row.runningState === 'departed') {
+  const arr = clockMinutesUntil(eventTime(row, 'arr'), now);
+  const status = String(row.status || '');
+  const atPlatform = row.runningState === 'arrived' || /arriv/i.test(status);
+
+  if (row.runningState === 'departed' || /depart/i.test(status)) {
     if (hideAfter > 0 && dep != null && -dep <= hideAfter) return false;
     return true;
   }
-  return dep != null && dep < 0 && -dep > hideAfter;
+  if (atPlatform) {
+    return dep != null && dep < 0 && -dep > hideAfter;
+  }
+  // Late / scheduled: only treat as gone once departure has passed beyond hideAfter
+  if (dep != null && dep < 0 && -dep > hideAfter) return true;
+  if (arr != null && dep == null && arr < 0 && -arr > hideAfter) return true;
+  return false;
+}
+
+function cacheAgeMinutes(payload) {
+  const ts = payload?.generatedAt || payload?.liveFetchedAt;
+  if (!ts) return null;
+  const ms = Date.now() - new Date(ts).getTime();
+  if (!Number.isFinite(ms)) return null;
+  return ms / 60000;
+}
+
+function isStaleCache(payload) {
+  const age = cacheAgeMinutes(payload);
+  return age != null && age > 10;
+}
+
+/** Station board: match PDS — trains in NTES lookahead window (+ brief past departures). */
+function boardLookaheadMinutes(payload) {
+  const hours = payload?.lookAheadHours;
+  if (typeof hours === 'number' && hours > 0) return hours * 60;
+  return 240;
+}
+
+function rowVisibleOnStationBoard(row, now, hideAfter, lookaheadMinutes) {
+  if (row.runningState === 'cancelled' || /cancel/i.test(row.status || '')) return false;
+  const arr = clockMinutesUntil(eventTime(row, 'arr'), now);
+  const dep = clockMinutesUntil(eventTime(row, 'dep'), now);
+  const events = [arr, dep].filter((x) => x != null);
+  if (!events.length) return true;
+  const minEvent = Math.min(...events);
+  const maxEvent = Math.max(...events);
+  const recentDepartGrace = Math.max(hideAfter, 20);
+  if (minEvent <= lookaheadMinutes && maxEvent >= -recentDepartGrace) return true;
+  return false;
+}
+
+function trainHasRake(t) {
+  return Boolean(
+    t?.compositionAvailable ||
+    (Array.isArray(t?.coaches) && t.coaches.length) ||
+    (Array.isArray(t?.coachCodes) && t.coachCodes.length)
+  );
 }
 
 function pickLiveFocus(payload, now = new Date()) {
@@ -158,6 +247,7 @@ function pickLiveFocus(payload, now = new Date()) {
   if (inWindow[0]) return inWindow[0];
 
   let best = null;
+  let bestWithRake = null;
   for (const r of rows) {
     const t = asTrain(r);
     if (rowDeparted(t, now, hideAfter)) continue;
@@ -166,11 +256,13 @@ function pickLiveFocus(payload, now = new Date()) {
     const m = [arr, dep].filter((x) => x != null && x >= 0);
     if (!m.length) continue;
     const minutesUntilEvent = Math.min(...m);
-    if (!best || minutesUntilEvent < best.minutesUntil) {
-      best = { train: t, minutesUntil: minutesUntilEvent, inWindow: false };
+    const cand = { train: t, minutesUntil: minutesUntilEvent, inWindow: false };
+    if (!best || minutesUntilEvent < best.minutesUntil) best = cand;
+    if (trainHasRake(t) && (!bestWithRake || minutesUntilEvent < bestWithRake.minutesUntil)) {
+      bestWithRake = cand;
     }
   }
-  return best;
+  return bestWithRake || best;
 }
 
 function resolveClientPin(display, platform, coaches, bogie) {
@@ -458,9 +550,38 @@ function headingBanner(heading) {
   return `<div class="heading-banner heading-unknown">${towardBits}</div>`;
 }
 
+function resolveFocusForRender(payload) {
+  const pick = pickLiveFocus(payload);
+  if (pick) return assembleFocus(payload, pick);
+
+  const serverFocus = payload?.focus;
+  if (serverFocus?.train && (serverFocus.coaches?.length || serverFocus.compositionAvailable)) {
+  const hideAfter = payload.hideAfterDepartMinutes ?? 0;
+    const now = new Date();
+    if (!rowDeparted(serverFocus.train, now, hideAfter)) {
+      return serverFocus;
+    }
+  }
+
+  if (isStaleCache(payload)) {
+    const relaxed = { ...payload, showBeforeMinutes: boardLookaheadMinutes(payload) };
+    const latePick = pickLiveFocus(relaxed);
+    if (latePick) return assembleFocus(payload, latePick);
+  }
+
+  return null;
+}
+
 function renderStationBoard(rows, focusTrainNo) {
   if (!rows || !rows.length) return '';
-  const body = rows.slice(0, 8).map((r) => {
+  const hideAfter = lastPayload?.hideAfterDepartMinutes ?? 0;
+  const lookahead = boardLookaheadMinutes(lastPayload || {});
+  const now = new Date();
+  const visible = rows
+    .filter((r) => rowVisibleOnStationBoard(r, now, hideAfter, lookahead))
+    .slice(0, 12);
+  if (!visible.length) return '';
+  const body = visible.map((r) => {
     const active = focusTrainNo && String(r.trainNo) === String(focusTrainNo);
     const delay =
       r.delay > 0
@@ -591,25 +712,27 @@ function render(payload) {
   if (adminLink) adminLink.textContent = t('admin');
   const themeLink = $('themeLink');
   if (themeLink) {
-    const displayId = qs('display') || 'entrance-main';
     if (THEME === 'chart') {
-      themeLink.href = `/?display=${encodeURIComponent(displayId)}`;
+      themeLink.href = `/?${displayQuery()}`;
       themeLink.textContent = t('tvView');
     } else {
-      themeLink.href = `/chart.html?display=${encodeURIComponent(displayId)}`;
+      themeLink.href = `/chart.html?${displayQuery()}`;
       themeLink.textContent = t('chartView');
     }
   }
 
-  const pick = pickLiveFocus(payload);
-  const focus = assembleFocus(payload, pick);
+  const focus = resolveFocusForRender(payload);
   lastPickMinute = new Date().getHours() * 60 + new Date().getMinutes();
 
   $('footerMeta').textContent = `${payload.stationCode || ''} · ${payload.dataSource === 'ntes-live' ? t('live') : (payload.dataSource || 'cache')} · display ${payload.display?.id || '—'}`;
+  const cacheAge = cacheAgeMinutes(payload);
+  if (cacheAge != null && cacheAge > 10) {
+    $('footerMeta').textContent += ` · cache ${Math.round(cacheAge)}m old`;
+  }
   $('footerWindow').textContent = t('footerWindow')
     .replace('{before}', String(payload.showBeforeMinutes ?? 10))
     .replace('{bogie}', String(payload.bogieLengthMeters ?? 25))
-    .replace('{coaches}', String(focus?.coachCount || payload.liveTrainCount || '—'));
+    .replace('{coaches}', String(focus?.coachCount || '—'));
   const focusKey = focus?.train?.trainNo ? `${focus.train.trainNo}@${focus.platform}` : '';
   const shouldArrive = Boolean(focusKey && focusKey !== window.__coachFocusKey);
   if (focusKey) window.__coachFocusKey = focusKey;
@@ -628,13 +751,16 @@ function render(payload) {
 }
 
 async function loadTypes() {
-  try {
-    const res = await fetch(`${API_BASE}/api/coach-types`);
-    if (res.ok) {
-      typesDoc = await res.json();
-      return;
-    }
-  } catch { /* fall through */ }
+  const apiRoot = liveApiRoot();
+  if (apiRoot !== null) {
+    try {
+      const res = await fetch(`${apiRoot}/api/coach-types`);
+      if (res.ok) {
+        typesDoc = await res.json();
+        return;
+      }
+    } catch { /* fall through */ }
+  }
   try {
     const res = await fetch('/data/coach_types.json', { cache: 'no-store' });
     if (res.ok) typesDoc = await res.json();
@@ -652,10 +778,38 @@ async function loadStations() {
 }
 
 async function loadLayout() {
-  try {
-    const res = await fetch('/data/station_layout.json', { cache: 'no-store' });
-    if (res.ok) stationLayout = await res.json();
-  } catch { /* ignore */ }
+  const urls = [
+    `/data/stations/${stationCode()}/layout.json`,
+    '/data/station_layout.json'
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (res.ok) {
+        stationLayout = await res.json();
+        return;
+      }
+    } catch { /* next */ }
+  }
+}
+
+let displaysDocCache = null;
+async function loadDisplaysDoc() {
+  const code = stationCode();
+  const urls = [
+    `/data/stations/${code}/displays.json`,
+    code === DEFAULT_STATION ? '/data/coach_displays.json' : null
+  ].filter(Boolean);
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
+      const ct = res.headers.get('content-type') || '';
+      if (!res.ok || !ct.includes('application/json')) continue;
+      displaysDocCache = await res.json();
+      return displaysDocCache;
+    } catch { /* next */ }
+  }
+  return displaysDocCache;
 }
 
 function showSessionStopped() {
@@ -678,47 +832,56 @@ function reconnectSession() {
 
 async function loadBoard() {
   if (sessionStopped) return;
-  const display = qs('display') || 'entrance-main';
+  const display = displayId();
+  const station = stationCode();
   const sessionId = getSessionId();
-  try {
-    const res = await fetch(
-      `${API_BASE}/api/coach-board?display=${encodeURIComponent(display)}&sessionId=${encodeURIComponent(sessionId)}`,
-      {
-        cache: 'no-store',
-        headers: { 'X-Session-Id': sessionId, Accept: 'application/json' }
+  const displaysDoc = await loadDisplaysDoc();
+
+  const apiRoot = liveApiRoot();
+  if (apiRoot !== null) {
+    try {
+      const res = await fetch(
+        `${apiRoot}/api/coach-board?station=${encodeURIComponent(station)}&display=${encodeURIComponent(display)}&sessionId=${encodeURIComponent(sessionId)}`,
+        {
+          cache: 'no-store',
+          headers: { 'X-Session-Id': sessionId, Accept: 'application/json' }
+        }
+      );
+      const data = await res.json().catch(() => null);
+      if (isSessionStoppedPayload(data) || (res.status === 409 && isSessionStoppedPayload(data))) {
+        clearSessionId();
+        showSessionStopped();
+        return;
       }
-    );
-    const data = await res.json().catch(() => null);
-    if (isSessionStoppedPayload(data) || (res.status === 409 && isSessionStoppedPayload(data))) {
-      clearSessionId();
-      showSessionStopped();
-      return;
+      if (res.ok && data && (data.platforms || data.focus || data.stationBoard)) {
+        render(applyDisplay(data, displaysDoc));
+        return;
+      }
+    } catch {
+      /* fall through to static cache */
     }
-    if (res.ok && data && (data.platforms || data.focus || data.stationBoard)) {
-      render(data);
-      return;
-    }
-  } catch {
-    /* fall through to static fixture */
   }
 
-  try {
-    const res = await fetch(`/data/coach_board_cache.json?display=${encodeURIComponent(display)}`, {
-      cache: 'no-store'
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.platforms || data.focus || data.stationBoard) {
-      if (data.display && display && data.display.id !== display) {
-        data.display.id = display;
+  const urls = [
+    `/data/stations/${station}/board.json`,
+    station === DEFAULT_STATION ? '/data/coach_board_cache.json' : null
+  ].filter(Boolean);
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
+      if (!res.ok) continue;
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) continue;
+      const data = await res.json();
+      if (data.platforms || data.focus || data.stationBoard) {
+        render(applyDisplay(data, displaysDoc));
+        return;
       }
-      render(data);
-      return;
+    } catch {
+      /* next */
     }
-    throw new Error('Invalid static board fixture');
-  } catch (err) {
-    $('board').innerHTML = `<div class="idle">Unable to load: ${esc(err.message)}</div>`;
   }
+  $('board').innerHTML = `<div class="idle">Unable to load: no board cache for ${esc(station)}</div>`;
 }
 
 if ($('bootLoading')) $('bootLoading').textContent = t('loading');
@@ -731,5 +894,5 @@ setInterval(() => {
   else updateClock();
 }, LANG_MS);
 
-Promise.all([loadTypes(), loadLayout(), loadStations()]).then(loadBoard);
+Promise.all([loadTypes(), loadLayout(), loadStations(), loadDisplaysDoc()]).then(loadBoard);
 setInterval(loadBoard, REFRESH_MS);
