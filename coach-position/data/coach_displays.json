@@ -1,9 +1,10 @@
 {
-  "stationCode": "CHZ",
-  "stationName": "Charlapalli",
+  "stationCode": "BG",
+  "stationName": "Bhongir",
   "bogieLengthMeters": 25,
   "showBeforeMinutes": 10,
-  "hideAfterDepartMinutes": 15,
+  "hideAfterDepartMinutes": 0,
+  "lookAheadHours": 4,
   "languages": ["en", "te", "hi"],
   "displays": [
     {

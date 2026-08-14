@@ -27,10 +27,50 @@
     </section>
 
     <section id="panel" hidden>
-      <p>Station: <strong id="stationCode">—</strong>
+      <h2>Station</h2>
+      <div class="form station-form">
+        <label>Station code <input id="fStationCode" placeholder="BG" maxlength="10" autocomplete="off" spellcheck="false"></label>
+        <button type="button" id="btnSearchStation" class="btn btn-secondary">Search</button>
+        <label>Station name <input id="fStationName" placeholder="Looked up from NTES" readonly></label>
+        <button type="button" id="btnSaveStation" class="btn">Save station</button>
+      </div>
+      <p class="hint">Enter the NTES code, click <strong>Search</strong> to fill the name, then <strong>Save station</strong> and <strong>Open display</strong>.</p>
+      <p id="stationHint" class="status" hidden></p>
+
+      <p style="margin-top:1.25rem">Displays for <strong id="stationCode">—</strong>
         · <a id="previewLink" href="/?display=entrance-main" target="_blank">Open display</a>
       </p>
       <div id="list" class="list"></div>
+
+      <h2>Display sessions</h2>
+      <div class="session-summary">
+        <span>Active: <strong id="activeCount">0</strong></span>
+        <div class="session-actions">
+          <button type="button" id="btnRefreshSessions" class="btn btn-secondary">Refresh list</button>
+          <button type="button" id="btnStopAll" class="btn btn-stop">Stop all</button>
+        </div>
+      </div>
+      <table class="session-table">
+        <thead>
+          <tr>
+            <th>Session</th>
+            <th>Started</th>
+            <th>Running</th>
+            <th>Last seen</th>
+            <th>Browser</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="sessionBody">
+          <tr><td colspan="6">No active sessions</td></tr>
+        </tbody>
+      </table>
+      <p class="hint">
+        A session is a browser tab on the display. Idle tabs drop off after ~90s.
+        Stopping a session blanks that TV. Session control needs the local API
+        (<code>localhost:3001</code>) or a future API Lambda — the CloudFront-only site
+        cannot list or stop sessions.
+      </p>
 
       <h2>Edit / create display</h2>
       <div class="form">

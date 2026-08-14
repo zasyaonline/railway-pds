@@ -5,6 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "refresh:live": "node scripts/refresh-live-cache.js",
+    "publish:live": "bash scripts/publish-live-cache.sh",
+    "publish:ui": "bash scripts/publish-ui.sh",
     "build:lambda": "bash scripts/build-lambda.sh",
     "deploy:aws": "bash scripts/deploy.sh"
   },

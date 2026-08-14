@@ -1,0 +1,32 @@
+name: Refresh Coach Position cache
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Refresh NTES cache and publish
+        env:
+          AWS_REGION: ap-south-1
+          COACH_SITE_BUCKET: railway-coach-position-site-884000107109
+          COACH_CF_DIST: E12U4PGOD25ISI
+        run: |
+          chmod +x coach-position/scripts/publish-live-cache.sh
+          ./coach-position/scripts/publish-live-cache.sh

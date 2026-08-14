@@ -1,6 +1,27 @@
 {
   "code": "CHZ",
   "name": "Charlapalli",
+  "screenAxis": {
+    "leftToward": [
+      "SECUNDERABAD JN",
+      "SECUNDERABAD",
+      "SC",
+      "SIRPUR KAGHAZNAGAR",
+      "SKZR",
+      "KAZIPET",
+      "KZJ",
+      "BIDAR",
+      "BIDR"
+    ],
+    "rightToward": [
+      "VIJAYAWADA JN",
+      "VIJAYAWADA",
+      "BZA",
+      "WARANGAL",
+      "WL"
+    ],
+    "note": "Screen left ≈ Secunderabad / SKZR / Bidar end; screen right ≈ Vijayawada end. Confirm on site after survey."
+  },
   "platforms": [
     {
       "id": "1",

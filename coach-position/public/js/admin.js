@@ -1,11 +1,58 @@
 'use strict';
 
 const API_BASE = (window.COACH_CONFIG && window.COACH_CONFIG.API_BASE) || '';
+const LOOKUP_BASE = (window.COACH_CONFIG && window.COACH_CONFIG.LOOKUP_BASE) || API_BASE;
 const KEY_STORAGE = 'coach_admin_key';
 let adminKey = '';
 let doc = null;
 
 function $(id) { return document.getElementById(id); }
+
+function showStatus(msg, ok = true) {
+  const status = $('status');
+  status.textContent = msg;
+  status.style.color = ok ? '#4ade80' : '#f87171';
+  status.hidden = false;
+}
+
+function showStationHint(msg, ok = true) {
+  const el = $('stationHint');
+  el.textContent = msg;
+  el.style.color = ok ? '#4ade80' : '#f87171';
+  el.hidden = false;
+}
+
+function localAdminUrl() {
+  return 'http://localhost:3001/admin.html';
+}
+
+function formatDuration(totalSeconds) {
+  const s = Math.max(0, Number(totalSeconds) || 0);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m ${sec}s`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
+
+function shortId(id) {
+  if (!id) return '—';
+  return id.length > 12 ? `${id.slice(0, 8)}…` : id;
+}
+
+function browserLabel(ua) {
+  if (!ua) return '—';
+  if (/Edg\//.test(ua)) return 'Edge';
+  if (/Chrome\//.test(ua)) return 'Chrome';
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) return 'Safari';
+  return ua.slice(0, 40);
+}
+
+let sessionPoll = null;
+let hasApi = false;
+let searchedCode = '';
 
 async function api(path, options = {}) {
   const headers = Object.assign(
@@ -24,8 +71,16 @@ async function api(path, options = {}) {
   return data;
 }
 
+function syncStationFields() {
+  $('fStationCode').value = doc.stationCode || '';
+  $('fStationName').value = doc.stationName || '';
+  searchedCode = doc.stationCode || '';
+  $('stationCode').textContent =
+    `${doc.stationCode || '—'}${doc.stationName ? ` · ${doc.stationName}` : ''}`;
+}
+
 function renderList() {
-  $('stationCode').textContent = doc.stationCode || '—';
+  syncStationFields();
   const list = $('list');
   list.innerHTML = (doc.displays || []).map((d) => `
     <div class="card" data-id="${d.id}">
@@ -51,27 +106,151 @@ function renderList() {
   });
 }
 
+async function loadStaticDisplays() {
+  const res = await fetch('/data/coach_displays.json', { cache: 'no-store' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
 async function unlock() {
   adminKey = $('adminKey').value.trim();
   $('gateError').hidden = true;
+  hasApi = false;
   try {
     doc = await api('/api/admin/displays');
-    sessionStorage.setItem(KEY_STORAGE, adminKey);
-    $('gate').hidden = true;
-    $('panel').hidden = false;
-    renderList();
+    hasApi = true;
   } catch (err) {
-    $('gateError').textContent = err.status === 401 ? 'Invalid admin key' : err.message;
-    $('gateError').hidden = false;
+    if (err.status === 401) {
+      $('gateError').textContent = 'Invalid admin key';
+      $('gateError').hidden = false;
+      return;
+    }
+    try {
+      doc = await loadStaticDisplays();
+      hasApi = false;
+    } catch {
+      $('gateError').textContent = err.message;
+      $('gateError').hidden = false;
+      return;
+    }
+  }
+  try { sessionStorage.setItem(KEY_STORAGE, adminKey); } catch { /* ignore */ }
+  $('gate').hidden = true;
+  $('panel').hidden = false;
+  renderList();
+  loadSessions();
+  if (sessionPoll) clearInterval(sessionPoll);
+  sessionPoll = setInterval(loadSessions, 10000);
+  if (!hasApi) {
+    showStationHint(
+      `NTES lookup works here. To save a station and refresh the TV cache, use ${localAdminUrl()}.`,
+      false
+    );
   }
 }
 
 $('btnUnlock').addEventListener('click', unlock);
 $('adminKey').addEventListener('keydown', (e) => { if (e.key === 'Enter') unlock(); });
 
+$('fStationCode').addEventListener('input', () => {
+  $('fStationCode').value = $('fStationCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if ($('fStationCode').value !== searchedCode) {
+    $('fStationName').value = '';
+  }
+});
+$('fStationCode').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchStation();
+  }
+});
+
+async function searchStation() {
+  const code = $('fStationCode').value.trim().toUpperCase();
+  $('fStationCode').value = code;
+  if (!code || code.length < 2) {
+    showStationHint('Enter a 2–6 letter NTES station code', false);
+    return;
+  }
+  if (!hasApi && !LOOKUP_BASE) {
+    showStationHint(
+      `Search needs the local API. Open ${localAdminUrl()}, enter ${code}, then Search.`,
+      false
+    );
+    return;
+  }
+  const btn = $('btnSearchStation');
+  btn.disabled = true;
+  showStationHint('Looking up NTES…');
+  try {
+    let data;
+    if (hasApi) {
+      data = await api(`/api/admin/station-lookup?code=${encodeURIComponent(code)}`);
+    } else {
+      const res = await fetch(
+        `${LOOKUP_BASE}/api/station-lookup?code=${encodeURIComponent(code)}`,
+        { cache: 'no-store', headers: { Accept: 'application/json' } }
+      );
+      data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    $('fStationName').value = data.stationName || '';
+    searchedCode = data.stationCode || code;
+    $('fStationCode').value = searchedCode;
+    const trains = data.trainCount != null ? ` · ${data.trainCount} trains on the live board` : '';
+    showStationHint(`Found ${data.stationName}${trains}. Click Save station, then Open display.`);
+  } catch (err) {
+    $('fStationName').value = '';
+    searchedCode = '';
+    showStationHint(err.message, false);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+$('btnSearchStation').addEventListener('click', searchStation);
+
+$('btnSaveStation').addEventListener('click', async () => {
+  const code = $('fStationCode').value.trim().toUpperCase();
+  $('fStationCode').value = code;
+  if (!code) {
+    showStationHint('Enter a station code and click Search first', false);
+    return;
+  }
+  if (!hasApi) {
+    showStationHint(
+      `Name is filled from NTES. Save station still needs ${localAdminUrl()} (CloudFront cannot write the live config). Then Open display.`,
+      false
+    );
+    return;
+  }
+  if (! $('fStationName').value.trim()) {
+    await searchStation();
+    if (!$('fStationName').value.trim()) return;
+  }
+  try {
+    const result = await api('/api/admin/displays', {
+      method: 'POST',
+      body: JSON.stringify({
+        stationCode: code,
+        stationName: $('fStationName').value.trim()
+      })
+    });
+    doc.stationCode = result.stationCode;
+    doc.stationName = result.stationName;
+    if (result.displays) doc.displays = result.displays;
+    $('fStationName').value = result.stationName || '';
+    searchedCode = result.stationCode || code;
+    renderList();
+    showStationHint(`Saved ${result.stationCode} · ${result.stationName}. Open display to see this station.`);
+    showStatus(`Station saved: ${result.stationCode} · ${result.stationName}`);
+  } catch (err) {
+    showStationHint(err.message, false);
+    showStatus(err.message, false);
+  }
+});
+
 $('btnSave').addEventListener('click', async () => {
-  const status = $('status');
-  status.hidden = true;
   try {
     const platforms = $('fPlatforms').value.split(',').map((s) => s.trim()).filter(Boolean);
     const pinPf = $('fPinPf').value.trim();
@@ -91,17 +270,73 @@ $('btnSave').addEventListener('click', async () => {
     };
     const result = await api('/api/admin/displays', {
       method: 'POST',
-      body: JSON.stringify({ display })
+      body: JSON.stringify({
+        stationCode: $('fStationCode').value.trim(),
+        stationName: $('fStationName').value.trim(),
+        display
+      })
     });
     doc.displays = result.displays;
+    doc.stationCode = result.stationCode || doc.stationCode;
+    doc.stationName = result.stationName || doc.stationName;
     renderList();
-    status.textContent = 'Saved';
-    status.hidden = false;
+    showStatus('Saved');
     $('previewLink').href = `/?display=${encodeURIComponent(display.id)}`;
   } catch (err) {
-    status.textContent = err.message;
-    status.style.color = '#f87171';
-    status.hidden = false;
+    showStatus(err.message, false);
+  }
+});
+
+async function loadSessions() {
+  const tbody = $('sessionBody');
+  try {
+    const data = await api('/api/admin/sessions');
+    $('activeCount').textContent = String(data.activeCount ?? 0);
+    const sessions = data.sessions || [];
+    if (!sessions.length) {
+      tbody.innerHTML = '<tr><td colspan="6">No active sessions</td></tr>';
+      return;
+    }
+    tbody.innerHTML = sessions.map((s) => `
+      <tr>
+        <td><code title="${s.id}">${shortId(s.id)}</code></td>
+        <td>${new Date(s.startedAt).toLocaleString('en-IN')}</td>
+        <td><strong>${formatDuration(s.durationSeconds)}</strong></td>
+        <td>${formatDuration(s.idleSeconds)} ago</td>
+        <td>${browserLabel(s.userAgent)}</td>
+        <td><button type="button" class="btn btn-stop btn-stop-one" data-id="${s.id}">Stop</button></td>
+      </tr>
+    `).join('');
+    tbody.querySelectorAll('.btn-stop-one').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          await api('/api/admin/sessions/stop', {
+            method: 'POST',
+            body: JSON.stringify({ sessionId: btn.dataset.id })
+          });
+          await loadSessions();
+        } catch (err) {
+          alert(err.message);
+          btn.disabled = false;
+        }
+      });
+    });
+  } catch {
+    $('activeCount').textContent = '0';
+    tbody.innerHTML = '<tr><td colspan="6">Sessions unavailable (no API on this host)</td></tr>';
+  }
+}
+
+$('btnRefreshSessions').addEventListener('click', loadSessions);
+$('btnStopAll').addEventListener('click', async () => {
+  if (!confirm('Stop all active display sessions?')) return;
+  try {
+    await api('/api/admin/sessions/stop-all', { method: 'POST', body: '{}' });
+    await loadSessions();
+    showStatus('Stopped all sessions');
+  } catch (err) {
+    showStatus(err.message, false);
   }
 });
 

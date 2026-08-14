@@ -9,7 +9,7 @@ Separate host from PDS (`platform.zasya.online`).
 | CloudFront | `E12U4PGOD25ISI` → `d1eozsdsb11ew0.cloudfront.net` |
 | S3 | `railway-coach-position-site-884000107109` |
 | Admin key | `coach-ops` |
-| API Lambda | Pending IAM (`PassRole` / `CreateRole` blocked for `cursoruser`) — UI uses static board fixture fallback |
+| API Lambda | Pending IAM (`PassRole` / `CreateRole` blocked for `cursoruser`) — TV uses static cache. Admin **Search** uses PDS `GET /api/station-lookup` via `LOOKUP_BASE`. |
 
 ---
 

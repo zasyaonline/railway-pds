@@ -166,6 +166,21 @@
       "typeId": "ac3"
     },
     {
+      "match": "LPR",
+      "typeId": "parcel",
+      "note": "Luggage / parcel"
+    },
+    {
+      "match": "re:^BE\\d*$",
+      "typeId": "ac3",
+      "note": "3A economy / BE"
+    },
+    {
+      "match": "re:^M\\d+$",
+      "typeId": "ac3",
+      "note": "3E"
+    },
+    {
       "match": "3E",
       "typeId": "ac3"
     },
@@ -186,6 +201,11 @@
       "typeId": "chair"
     },
     {
+      "match": "re:^D\\d+$",
+      "typeId": "chair",
+      "note": "2S day coaches"
+    },
+    {
       "match": "re:^S\\d+$",
       "typeId": "sleeper"
     },
@@ -199,10 +219,6 @@
     },
     {
       "match": "GEN",
-      "typeId": "general"
-    },
-    {
-      "match": "re:^D\\d*$",
       "typeId": "general"
     }
   ]

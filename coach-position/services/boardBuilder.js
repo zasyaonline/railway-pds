@@ -1,19 +1,112 @@
 'use strict';
 
-const { mapComposition, resolveYouAreHere } = require('./coachMapper');
-const { pickTrainForPlatform, nextOutsideWindow } = require('./windowService');
-const { fetchTrainComposition } = require('./compositionService');
+const { mapComposition, resolveYouAreHere, attachWalkMetrics } = require('./coachMapper');
+const {
+  pickTrainForPlatform,
+  nextOutsideWindow,
+  pickFocusTrain,
+  summarizeBoardTrains
+} = require('./windowService');
+const { resolveTravelHeading } = require('./headingService');
+
+function resolveCoaches(train, typesDoc) {
+  const codes = train.coachCodes || [];
+  if (!codes.length) {
+    return { coaches: [], source: null, pwdPositions: [] };
+  }
+  const pwdPositions = train.pwdPositions || [];
+  const coaches = mapComposition(codes, typesDoc, {
+    classes: train.coachClasses || [],
+    pwdPositions
+  });
+  return {
+    coaches,
+    source: train.compositionSource || 'ntes-live-board',
+    pwdPositions
+  };
+}
+
+function buildPlatformStrip({
+  pf,
+  picked,
+  display,
+  typesDoc,
+  bogie,
+  stationLayout,
+  showPin
+}) {
+  if (!picked) {
+    return {
+      platform: String(pf),
+      inWindow: false,
+      train: null,
+      compositionAvailable: false,
+      coaches: [],
+      divyangjanPositions: [],
+      youAreHere: resolveYouAreHere(showPin ? display.youAreHere : null, [], bogie),
+      nextLabel: null
+    };
+  }
+
+  const t = picked.train;
+  const { coaches: coachesMapped, source, pwdPositions } = resolveCoaches(t, typesDoc);
+
+  const pinCfg =
+    showPin && display.youAreHere && String(display.youAreHere.platform) === String(pf)
+      ? { ...display.youAreHere, facing: display.youAreHere.facing || 'engine_left' }
+      : null;
+
+  const youAreHere = resolveYouAreHere(pinCfg, coachesMapped, bogie);
+  if (!pinCfg) youAreHere.enabled = false;
+  else youAreHere.platform = String(pf);
+
+  const coaches = attachWalkMetrics(coachesMapped, youAreHere, bogie);
+  const from = t.from || null;
+  const to = t.to || null;
+  const heading = resolveTravelHeading(from, to, stationLayout);
+  const divyangjan = coaches.filter((c) => c.divyangjan);
+
+  return {
+    platform: String(pf),
+    inWindow: picked.inWindow !== false,
+    train: {
+      trainNo: t.trainNo,
+      trainName: t.trainName,
+      platform: String(t.platform),
+      from,
+      to,
+      expectedArrival: t.expectedArrival || t.scheduledArrival || null,
+      expectedDeparture: t.expectedDeparture || t.scheduledDeparture || null,
+      minutesUntil: picked.minutesUntil,
+      status: t.status || null,
+      delay: t.delay ?? 0
+    },
+    heading,
+    compositionAvailable: coaches.length > 0,
+    coaches,
+    coachCount: coaches.length,
+    compositionSource: source,
+    divyangjanPositions: pwdPositions,
+    divyangjanCoaches: divyangjan.map((c) => ({
+      position: c.position,
+      code: c.code,
+      label: c.label
+    })),
+    youAreHere,
+    nextLabel: null
+  };
+}
 
 /**
- * Build /api/coach-board payload for a display profile.
+ * Build /api/coach-board payload for a display profile from live (halt) trains only.
  */
 async function buildCoachBoard({
   displaysDoc,
   typesDoc,
   displayId,
   boardTrains,
-  compositionCache,
-  useNtes
+  stationLayout,
+  dataSource
 }) {
   const display =
     (displaysDoc.displays || []).find((d) => d.id === displayId) ||
@@ -24,95 +117,103 @@ async function buildCoachBoard({
   }
 
   const showBefore = displaysDoc.showBeforeMinutes ?? 10;
-  const hideAfter = displaysDoc.hideAfterDepartMinutes ?? 15;
+  const hideAfter = displaysDoc.hideAfterDepartMinutes ?? 0;
   const bogie = displaysDoc.bogieLengthMeters ?? 25;
   const platformsShown = display.platformsShown || [];
-  const cache = compositionCache || {};
+  const trains = boardTrains || [];
+
+  const stationBoard = summarizeBoardTrains(trains);
+
+  const boardRakes = {};
+  for (const t of trains) {
+    const { coaches: coachesMapped, source, pwdPositions } = resolveCoaches(t, typesDoc);
+    const heading = resolveTravelHeading(t.from || null, t.to || null, stationLayout);
+    const divyangjan = coachesMapped.filter((c) => c.divyangjan);
+    boardRakes[String(t.trainNo)] = {
+      trainNo: t.trainNo,
+      trainName: t.trainName,
+      platform: String(t.platform),
+      from: t.from || null,
+      to: t.to || null,
+      expectedArrival: t.expectedArrival || t.scheduledArrival || null,
+      expectedDeparture: t.expectedDeparture || t.scheduledDeparture || null,
+      status: t.status || null,
+      delay: t.delay ?? 0,
+      runningState: t.runningState || null,
+      heading,
+      compositionAvailable: coachesMapped.length > 0,
+      coaches: coachesMapped,
+      coachCount: coachesMapped.length,
+      compositionSource: source,
+      divyangjanPositions: pwdPositions,
+      divyangjanCoaches: divyangjan.map((c) => ({
+        position: c.position,
+        code: c.code,
+        label: c.label
+      }))
+    };
+  }
 
   const platforms = [];
   for (const pf of platformsShown) {
-    const picked = pickTrainForPlatform(boardTrains || [], pf, showBefore, hideAfter);
-    const pinForThisPf =
-      display.youAreHere && String(display.youAreHere.platform) === String(pf)
-        ? display.youAreHere
-        : null;
-
-    if (!picked) {
-      platforms.push({
-        platform: String(pf),
-        inWindow: false,
-        train: null,
-        compositionAvailable: false,
-        coaches: [],
-        youAreHere: resolveYouAreHere(pinForThisPf, [], bogie),
-        nextLabel: null
-      });
-      continue;
-    }
-
-    const t = picked.train;
-    let codes = cache[t.trainNo];
-    let source = 'cache';
-    if (!codes) {
-      const fetched = await fetchTrainComposition(t.trainNo, { useNtes });
-      codes = fetched.codes;
-      source = fetched.source;
-    }
-
-    const coaches = mapComposition(codes, typesDoc);
-    const youAreHere = resolveYouAreHere(
-      pinForThisPf
-        ? { ...pinForThisPf, facing: pinForThisPf.facing || display.youAreHere?.facing }
-        : null,
-      coaches,
-      bogie
+    const picked = pickTrainForPlatform(trains, pf, showBefore, hideAfter);
+    platforms.push(
+      buildPlatformStrip({
+        pf,
+        picked,
+        display,
+        typesDoc,
+        bogie,
+        stationLayout,
+        showPin: true
+      })
     );
-    if (!pinForThisPf) {
-      youAreHere.enabled = false;
-    }
-
-    platforms.push({
-      platform: String(pf),
-      inWindow: true,
-      train: {
-        trainNo: t.trainNo,
-        trainName: t.trainName,
-        platform: String(t.platform),
-        expectedArrival: t.expectedArrival || t.scheduledArrival || null,
-        expectedDeparture: t.expectedDeparture || t.scheduledDeparture || null,
-        minutesUntil: picked.minutesUntil
-      },
-      compositionAvailable: coaches.length > 0,
-      coaches,
-      compositionSource: source,
-      youAreHere,
-      nextLabel: null
-    });
   }
 
-  const anyInWindow = platforms.some((p) => p.inWindow);
+  // Next arrival for the whole station (all halting trains), not demo platforms only
+  const focusPick = pickFocusTrain(trains, [], showBefore, hideAfter);
+  let focus = null;
+  if (focusPick) {
+    focus = buildPlatformStrip({
+      pf: focusPick.train.platform,
+      picked: focusPick,
+      display,
+      typesDoc,
+      bogie,
+      stationLayout,
+      showPin: true
+    });
+    focus.featured = true;
+  }
+
   const body = {
     stationCode: displaysDoc.stationCode,
     stationName: displaysDoc.stationName || displaysDoc.stationCode,
     generatedAt: new Date().toISOString(),
+    dataSource: dataSource || 'ntes-live',
     showBeforeMinutes: showBefore,
     hideAfterDepartMinutes: hideAfter,
     bogieLengthMeters: bogie,
+    walkSpeedMps: 0.65,
     languages: displaysDoc.languages || ['en', 'te', 'hi'],
     display: {
       id: display.id,
       name: display.name,
       mode: display.mode,
       platformsShown,
-      facing: display.youAreHere?.facing || 'engine_left'
+      facing: display.youAreHere?.facing || 'engine_left',
+      youAreHere: display.youAreHere || null
     },
+    stationBoard,
+    boardRakes,
+    focus,
     platforms
   };
 
-  if (!anyInWindow) {
+  if (!focus) {
     body.idle = {
       message: 'No train in coach-display window',
-      nextTrain: nextOutsideWindow(boardTrains || [], platformsShown, showBefore, hideAfter)
+      nextTrain: nextOutsideWindow(trains, [], showBefore, hideAfter)
     };
   }
 

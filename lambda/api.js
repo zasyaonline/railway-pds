@@ -410,6 +410,25 @@ exports.handler = async (event) => {
       return respond(200, { stopped: true, sessionId: String(sessionId) });
     }
 
+    if (method === 'GET' && (path.includes('/station-lookup') || path.endsWith('/station-lookup'))) {
+      const qs = event.queryStringParameters || {};
+      const code = String(qs.code || qs.stationCode || '').trim().toUpperCase();
+      if (!code || code.length < 2) {
+        return respond(400, { error: 'Enter a 2–6 letter station code' });
+      }
+      const ntes = await resolveStationFromNtes(code);
+      if (!ntes.ok) {
+        return respond(404, { error: ntes.error || `NTES did not return a name for ${code}` });
+      }
+      return respond(200, {
+        ok: true,
+        stationCode: ntes.stationCode,
+        stationName: ntes.stationName || code,
+        trainCount: ntes.trainCount,
+        source: 'ntes'
+      });
+    }
+
     // Default: trains board
     const viewer = await registerViewer(bucket, event);
     if (viewer.killed) {

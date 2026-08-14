@@ -1,8 +1,8 @@
 'use strict';
 
 /**
- * Live-board window: show coaches from T-showBefore until hideAfterDepart.
- * Uses HH:MM strings from mapped board trains (same style as PDS).
+ * Live-board window: feature coaches from T−showBefore until departure.
+ * Once departure time has passed, the train is gone (hideAfterDepartMinutes = 0).
  */
 
 function timeToMinutes(timeStr) {
@@ -22,11 +22,19 @@ function minutesUntil(timeStr, now = new Date()) {
   return diff;
 }
 
+function hasDeparted(train, now = new Date()) {
+  if (train.runningState === 'departed' || /depart/i.test(train.status || '')) return true;
+  const dep = minutesUntil(train.expectedDeparture || train.scheduledDeparture, now);
+  return dep != null && dep < 0;
+}
+
 /**
- * Pick primary train for a platform that is in the coach-display window.
+ * Pick primary train for a platform that is in the T−showBefore approach window
+ * (or standing at the platform before departure).
  */
 function pickTrainForPlatform(boardTrains, platform, showBeforeMinutes, hideAfterDepartMinutes, now = new Date()) {
   const pf = String(platform);
+  const hideAfter = Number(hideAfterDepartMinutes) || 0;
   const candidates = (boardTrains || []).filter((t) => String(t.platform) === pf);
 
   const scored = [];
@@ -34,28 +42,25 @@ function pickTrainForPlatform(boardTrains, platform, showBeforeMinutes, hideAfte
     const arr = minutesUntil(t.expectedArrival || t.scheduledArrival, now);
     const dep = minutesUntil(t.expectedDeparture || t.scheduledDeparture, now);
     const atPlatform = t.runningState === 'arrived' || /arriv/i.test(t.status || '');
-    const departed = t.runningState === 'departed' || /depart/i.test(t.status || '');
+    const departed = hasDeparted(t, now);
 
     let inWindow = false;
     let minutesUntilEvent = null;
 
-    if (atPlatform && !departed) {
-      inWindow = true;
-      minutesUntilEvent = 0;
-    } else if (departed) {
-      const sinceDep = dep != null ? -dep : null;
-      inWindow = sinceDep != null && sinceDep <= hideAfterDepartMinutes;
-      minutesUntilEvent = dep;
-    } else {
-      const soonest = [arr, dep].filter((x) => x != null);
-      const minPos = soonest.length ? Math.min(...soonest.map((x) => (x < 0 ? 9999 : x))) : null;
-      if (minPos != null && minPos !== 9999 && minPos <= showBeforeMinutes) {
-        inWindow = true;
-        minutesUntilEvent = minPos;
-      } else if (arr != null && arr < 0 && dep != null && dep >= -hideAfterDepartMinutes) {
-        // Between arr and dep
+    if (departed) {
+      if (hideAfter > 0 && dep != null && -dep <= hideAfter) {
         inWindow = true;
         minutesUntilEvent = dep;
+      }
+    } else if (atPlatform && (dep == null || dep >= 0)) {
+      inWindow = true;
+      minutesUntilEvent = 0;
+    } else {
+      const soonest = [arr, dep].filter((x) => x != null && x >= 0);
+      const minPos = soonest.length ? Math.min(...soonest) : null;
+      if (minPos != null && minPos <= showBeforeMinutes) {
+        inWindow = true;
+        minutesUntilEvent = minPos;
       }
     }
 
@@ -64,7 +69,8 @@ function pickTrainForPlatform(boardTrains, platform, showBeforeMinutes, hideAfte
     scored.push({
       train: t,
       minutesUntil: minutesUntilEvent,
-      priority: atPlatform ? 0 : departed ? 2 : 1
+      priority: atPlatform ? 0 : 1,
+      inWindow: true
     });
   }
 
@@ -87,6 +93,7 @@ function nextOutsideWindow(boardTrains, platforms, showBeforeMinutes, hideAfterD
   for (const t of boardTrains || []) {
     if (shown.has(t.trainNo)) continue;
     if (platforms.length && !platforms.includes(String(t.platform))) continue;
+    if (hasDeparted(t, now)) continue;
     const arr = minutesUntil(t.expectedArrival || t.scheduledArrival, now);
     const dep = minutesUntil(t.expectedDeparture || t.scheduledDeparture, now);
     const m = [arr, dep].filter((x) => x != null && x >= 0);
@@ -106,9 +113,63 @@ function nextOutsideWindow(boardTrains, platforms, showBeforeMinutes, hideAfterD
   return best;
 }
 
+/**
+ * Next train to feature: prefer T−showBefore (inWindow), else soonest future halt.
+ */
+function pickFocusTrain(boardTrains, platforms, showBeforeMinutes, hideAfterDepartMinutes, now = new Date()) {
+  const list = boardTrains || [];
+  const pfFilter = (platforms || []).map(String);
+  const inWindow = [];
+  const platformsToScan = pfFilter.length
+    ? pfFilter
+    : [...new Set(list.map((t) => String(t.platform)))];
+
+  for (const pf of platformsToScan) {
+    const hit = pickTrainForPlatform(list, pf, showBeforeMinutes, hideAfterDepartMinutes, now);
+    if (hit) inWindow.push(hit);
+  }
+  inWindow.sort((a, b) => (a.minutesUntil ?? 999) - (b.minutesUntil ?? 999));
+  if (inWindow[0]) return inWindow[0];
+
+  const next = nextOutsideWindow(list, platformsToScan, showBeforeMinutes, hideAfterDepartMinutes, now);
+  if (!next) return null;
+  const train = list.find((t) => String(t.trainNo) === String(next.trainNo));
+  return train
+    ? { train, minutesUntil: next.minutesUntil, priority: 3, inWindow: false }
+    : null;
+}
+
+function summarizeBoardTrains(boardTrains, now = new Date()) {
+  const rows = (boardTrains || []).map((t) => {
+    const arr = minutesUntil(t.expectedArrival || t.scheduledArrival, now);
+    const dep = minutesUntil(t.expectedDeparture || t.scheduledDeparture, now);
+    const positive = [arr, dep].filter((x) => x != null && x >= 0);
+    const minutesUntilEvent = positive.length ? Math.min(...positive) : (dep ?? arr);
+    return {
+      trainNo: t.trainNo,
+      trainName: t.trainName || '',
+      from: t.from || t.source || null,
+      to: t.to || t.destination || null,
+      platform: String(t.platform),
+      expectedArrival: t.expectedArrival || t.scheduledArrival || null,
+      expectedDeparture: t.expectedDeparture || t.scheduledDeparture || null,
+      status: t.status || '—',
+      delay: t.delay ?? 0,
+      runningState: t.runningState || null,
+      minutesUntil: minutesUntilEvent,
+      ad: t.expectedArrival || t.scheduledArrival ? (t.expectedDeparture || t.scheduledDeparture ? 'A/D' : 'A') : 'D'
+    };
+  });
+  rows.sort((a, b) => (a.minutesUntil ?? 9999) - (b.minutesUntil ?? 9999));
+  return rows;
+}
+
 module.exports = {
   timeToMinutes,
   minutesUntil,
+  hasDeparted,
   pickTrainForPlatform,
-  nextOutsideWindow
+  nextOutsideWindow,
+  pickFocusTrain,
+  summarizeBoardTrains
 };

@@ -1,8 +1,8 @@
 'use strict';
 
 /**
- * Refresh placeholder — writes demo board timestamps into window.
- * Live NTES board + composition wiring enabled when COACH_USE_NTES=1.
+ * Refresh — writes live NTES station board + coach composition into S3 cache.
+ * Requires network access to enquiry.indianrail.gov.in.
  */
 
 const { S3Client, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
@@ -25,39 +25,50 @@ async function putJson(bucket, key, doc) {
   );
 }
 
-function mk(addMin) {
-  const d = new Date(Date.now() + addMin * 60_000);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
 exports.handler = async () => {
   const bucket = process.env.BUCKET_NAME;
   if (!bucket) throw new Error('BUCKET_NAME missing');
 
-  let board = [];
+  // Prefer packaged services when Lambda build copies them next to handler
+  let fetchLiveStationBoard;
+  let buildCoachBoard;
   try {
-    board = await getJson(bucket, 'data/demo_board.json');
+    ({ fetchLiveStationBoard } = require('./services/liveBoardService'));
+    ({ buildCoachBoard } = require('./services/boardBuilder'));
   } catch {
-    board = [];
+    ({ fetchLiveStationBoard } = require('../services/liveBoardService'));
+    ({ buildCoachBoard } = require('../services/boardBuilder'));
   }
 
-  const refreshed = (board || []).map((t, i) => {
-    const eta = mk(5 + i * 3);
-    return {
-      ...t,
-      expectedArrival: t.expectedArrival ? eta : null,
-      expectedDeparture: eta,
-      scheduledArrival: t.scheduledArrival ? eta : null,
-      scheduledDeparture: eta,
-      lastUpdated: new Date().toISOString()
-    };
-  });
+  const displaysDoc = await getJson(bucket, 'data/coach_displays.json');
+  const typesDoc = await getJson(bucket, 'data/coach_types.json');
+  const stationLayout = await getJson(bucket, 'data/station_layout.json').catch(() => null);
+  const hours = displaysDoc.lookAheadHours || 4;
 
-  await putJson(bucket, 'data/demo_board.json', refreshed);
-  await putJson(bucket, 'data/coach_board_cache.json', {
-    lastUpdated: new Date().toISOString(),
-    trains: refreshed
-  });
+  const live = await fetchLiveStationBoard(displaysDoc.stationCode, { lookAheadHours: hours });
+  if (live.stationName) displaysDoc.stationName = live.stationName;
 
-  return { ok: true, count: refreshed.length };
+  const result = await buildCoachBoard({
+    displaysDoc,
+    typesDoc,
+    displayId: displaysDoc.displays?.[0]?.id || 'entrance-main',
+    boardTrains: live.trains,
+    stationLayout,
+    dataSource: 'ntes-live'
+  });
+  if (result.error) throw new Error(JSON.stringify(result));
+
+  result.body.liveFetchedAt = live.fetchedAt;
+  result.body.liveTrainCount = live.trains.length;
+
+  await putJson(bucket, 'data/coach_board_cache.json', result.body);
+  await putJson(bucket, 'data/coach_displays.json', displaysDoc);
+
+  return {
+    ok: true,
+    station: displaysDoc.stationCode,
+    trains: live.trains.length,
+    focus: result.body.focus?.train?.trainNo || null,
+    coaches: result.body.focus?.coachCount || 0
+  };
 };

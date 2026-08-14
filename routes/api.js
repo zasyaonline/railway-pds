@@ -159,6 +159,25 @@ function createApiRouter(deps) {
     res.json({ refreshEnabled: false, message: 'Refresh stopped' });
   });
 
+  router.get('/station-lookup', async (req, res) => {
+    const code = String(req.query.code || req.query.stationCode || '').trim().toUpperCase();
+    if (!code || code.length < 2) {
+      return res.status(400).json({ error: 'Enter a 2–6 letter station code' });
+    }
+    const ntes = await resolveStationFromNtes(code);
+    if (!ntes.ok) {
+      return res.status(404).json({ error: ntes.error || `NTES did not return a name for ${code}` });
+    }
+    res.set('Cache-Control', 'no-store');
+    res.json({
+      ok: true,
+      stationCode: ntes.stationCode,
+      stationName: ntes.stationName || code,
+      trainCount: ntes.trainCount,
+      source: 'ntes'
+    });
+  });
+
   router.get('/health', (req, res) => {
     const cache = getCache();
     const sessions = listActive(readSessions());

@@ -1,10 +1,12 @@
 {
-  "stationCode": "CHZ",
-  "stationName": "Charlapalli",
-  "generatedAt": "2026-08-12T13:42:35.027Z",
+  "stationCode": "BG",
+  "stationName": "BHONGIR",
+  "generatedAt": "2026-08-14T07:02:24.818Z",
+  "dataSource": "ntes-live",
   "showBeforeMinutes": 10,
-  "hideAfterDepartMinutes": 15,
+  "hideAfterDepartMinutes": 0,
   "bogieLengthMeters": 25,
+  "walkSpeedMps": 0.65,
   "languages": [
     "en",
     "te",
@@ -18,158 +20,1188 @@
       "1",
       "2"
     ],
-    "facing": "engine_left"
-  },
-  "platforms": [
-    {
+    "facing": "engine_left",
+    "youAreHere": {
       "platform": "1",
-      "inWindow": true,
-      "train": {
-        "trainNo": "12714",
-        "trainName": "SATAVAHANA SF",
-        "platform": "1",
-        "expectedArrival": null,
-        "expectedDeparture": "19:17",
-        "minutesUntil": 5
+      "metersFromEngineEnd": 75,
+      "facing": "engine_left"
+    }
+  },
+  "stationBoard": [
+    {
+      "trainNo": "17201",
+      "trainName": "GOLCONDA EXP",
+      "from": "GUNTUR JN",
+      "to": "SECUNDERABAD JN",
+      "platform": "1",
+      "expectedArrival": "12:29",
+      "expectedDeparture": "12:30",
+      "status": "On Time",
+      "delay": 0,
+      "runningState": "scheduled",
+      "minutesUntil": -2,
+      "ad": "A/D"
+    },
+    {
+      "trainNo": "17202",
+      "trainName": "GOLCONDA EXP",
+      "from": "SECUNDERABAD JN",
+      "to": "GUNTUR JN",
+      "platform": "2",
+      "expectedArrival": "13:24",
+      "expectedDeparture": "13:25",
+      "status": "On Time",
+      "delay": 0,
+      "runningState": "scheduled",
+      "minutesUntil": 52,
+      "ad": "A/D"
+    },
+    {
+      "trainNo": "67762",
+      "trainName": "WL-SC MEMU",
+      "from": "WARANGAL",
+      "to": "SECUNDERABAD JN",
+      "platform": "1",
+      "expectedArrival": "15:54",
+      "expectedDeparture": "15:55",
+      "status": "On Time",
+      "delay": 0,
+      "runningState": "scheduled",
+      "minutesUntil": 202,
+      "ad": "A/D"
+    },
+    {
+      "trainNo": "17233",
+      "trainName": "BHAGYANAGAR EXP",
+      "from": "SECUNDERABAD JN",
+      "to": "SIRPUR KAGHAZNAGAR",
+      "platform": "2",
+      "expectedArrival": "16:19",
+      "expectedDeparture": "16:20",
+      "status": "On Time",
+      "delay": 0,
+      "runningState": "scheduled",
+      "minutesUntil": 227,
+      "ad": "A/D"
+    },
+    {
+      "trainNo": "18045",
+      "trainName": "EAST COAST EXP",
+      "from": "SHALIMAR",
+      "to": "CHARLAPALLI",
+      "platform": "1",
+      "expectedArrival": "16:42",
+      "expectedDeparture": "16:43",
+      "status": "Late by 58 mins",
+      "delay": 58,
+      "runningState": "scheduled",
+      "minutesUntil": 250,
+      "ad": "A/D"
+    }
+  ],
+  "boardRakes": {
+    "17201": {
+      "trainNo": "17201",
+      "trainName": "GOLCONDA EXP",
+      "platform": "1",
+      "from": "GUNTUR JN",
+      "to": "SECUNDERABAD JN",
+      "expectedArrival": "12:29",
+      "expectedDeparture": "12:30",
+      "status": "On Time",
+      "delay": 0,
+      "runningState": "scheduled",
+      "heading": {
+        "direction": "left",
+        "toward": "SECUNDERABAD JN",
+        "from": "GUNTUR JN",
+        "engineSide": "left"
       },
       "compositionAvailable": true,
       "coaches": [
         {
           "seq": 1,
+          "position": 0,
           "code": "ENG",
+          "classCode": "ENG",
           "typeId": "engine",
-          "label": "ENG"
+          "label": "ENG",
+          "divyangjan": false
         },
         {
           "seq": 2,
-          "code": "SLR",
-          "typeId": "slr",
-          "label": "SLR"
+          "position": 1,
+          "code": "LPR",
+          "classCode": "LPR",
+          "typeId": "parcel",
+          "label": "LPR",
+          "divyangjan": false
         },
         {
           "seq": 3,
-          "code": "S1",
-          "typeId": "sleeper",
-          "label": "S1"
+          "position": 2,
+          "code": "M1",
+          "classCode": "3E",
+          "typeId": "ac3",
+          "label": "M1",
+          "divyangjan": false
         },
         {
           "seq": 4,
-          "code": "S2",
-          "typeId": "sleeper",
-          "label": "S2"
+          "position": 3,
+          "code": "C1",
+          "classCode": "CC",
+          "typeId": "chair",
+          "label": "C1",
+          "divyangjan": false
         },
         {
           "seq": 5,
-          "code": "S3",
-          "typeId": "sleeper",
-          "label": "S3"
+          "position": 4,
+          "code": "D1",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D1",
+          "divyangjan": false
         },
         {
           "seq": 6,
-          "code": "PC",
-          "typeId": "pantry",
-          "label": "PC"
+          "position": 5,
+          "code": "D2",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D2",
+          "divyangjan": false
         },
         {
           "seq": 7,
-          "code": "B1",
-          "typeId": "ac3",
-          "label": "B1"
+          "position": 6,
+          "code": "D3",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D3",
+          "divyangjan": false
         },
         {
           "seq": 8,
-          "code": "B2",
-          "typeId": "ac3",
-          "label": "B2"
+          "position": 7,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
         },
         {
           "seq": 9,
-          "code": "A1",
-          "typeId": "ac2",
-          "label": "A1"
+          "position": 8,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
         },
         {
           "seq": 10,
-          "code": "HA1",
-          "typeId": "ac1",
-          "label": "HA1"
+          "position": 9,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
         },
         {
           "seq": 11,
-          "code": "SLR",
+          "position": 10,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 12,
+          "position": 11,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 13,
+          "position": 12,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 14,
+          "position": 13,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 15,
+          "position": 14,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 16,
+          "position": 15,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 17,
+          "position": 16,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 18,
+          "position": 17,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 19,
+          "position": 18,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 20,
+          "position": 19,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 21,
+          "position": 20,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 22,
+          "position": 21,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 23,
+          "position": 22,
+          "code": "SLRD",
+          "classCode": "SLRD",
           "typeId": "slr",
-          "label": "SLR"
+          "label": "SLRD",
+          "divyangjan": true
         }
       ],
-      "compositionSource": "fixture",
+      "coachCount": 23,
+      "compositionSource": "ntes-live-board",
+      "divyangjanPositions": [
+        22
+      ],
+      "divyangjanCoaches": [
+        {
+          "position": 22,
+          "code": "SLRD",
+          "label": "SLRD"
+        }
+      ]
+    },
+    "17202": {
+      "trainNo": "17202",
+      "trainName": "GOLCONDA EXP",
+      "platform": "2",
+      "from": "SECUNDERABAD JN",
+      "to": "GUNTUR JN",
+      "expectedArrival": "13:24",
+      "expectedDeparture": "13:25",
+      "status": "On Time",
+      "delay": 0,
+      "runningState": "scheduled",
+      "heading": {
+        "direction": "right",
+        "toward": "GUNTUR JN",
+        "from": "SECUNDERABAD JN",
+        "engineSide": "right"
+      },
+      "compositionAvailable": true,
+      "coaches": [
+        {
+          "seq": 1,
+          "position": 0,
+          "code": "ENG",
+          "classCode": "ENG",
+          "typeId": "engine",
+          "label": "ENG",
+          "divyangjan": false
+        },
+        {
+          "seq": 2,
+          "position": 1,
+          "code": "SLRD",
+          "classCode": "SLRD",
+          "typeId": "slr",
+          "label": "SLRD",
+          "divyangjan": true
+        },
+        {
+          "seq": 3,
+          "position": 2,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 4,
+          "position": 3,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 5,
+          "position": 4,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 6,
+          "position": 5,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 7,
+          "position": 6,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 8,
+          "position": 7,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 9,
+          "position": 8,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 10,
+          "position": 9,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 11,
+          "position": 10,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 12,
+          "position": 11,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 13,
+          "position": 12,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 14,
+          "position": 13,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 15,
+          "position": 14,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 16,
+          "position": 15,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 17,
+          "position": 16,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 18,
+          "position": 17,
+          "code": "D3",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D3",
+          "divyangjan": false
+        },
+        {
+          "seq": 19,
+          "position": 18,
+          "code": "D2",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D2",
+          "divyangjan": false
+        },
+        {
+          "seq": 20,
+          "position": 19,
+          "code": "D1",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D1",
+          "divyangjan": false
+        },
+        {
+          "seq": 21,
+          "position": 20,
+          "code": "C1",
+          "classCode": "CC",
+          "typeId": "chair",
+          "label": "C1",
+          "divyangjan": false
+        },
+        {
+          "seq": 22,
+          "position": 21,
+          "code": "M1",
+          "classCode": "3E",
+          "typeId": "ac3",
+          "label": "M1",
+          "divyangjan": false
+        },
+        {
+          "seq": 23,
+          "position": 22,
+          "code": "LPR",
+          "classCode": "LPR",
+          "typeId": "parcel",
+          "label": "LPR",
+          "divyangjan": false
+        }
+      ],
+      "coachCount": 23,
+      "compositionSource": "ntes-live-board",
+      "divyangjanPositions": [
+        1
+      ],
+      "divyangjanCoaches": [
+        {
+          "position": 1,
+          "code": "SLRD",
+          "label": "SLRD"
+        }
+      ]
+    },
+    "17233": {
+      "trainNo": "17233",
+      "trainName": "BHAGYANAGAR EXP",
+      "platform": "2",
+      "from": "SECUNDERABAD JN",
+      "to": "SIRPUR KAGHAZNAGAR",
+      "expectedArrival": "16:19",
+      "expectedDeparture": "16:20",
+      "status": "On Time",
+      "delay": 0,
+      "runningState": "scheduled",
+      "heading": {
+        "direction": "right",
+        "toward": "SIRPUR KAGHAZNAGAR",
+        "from": "SECUNDERABAD JN",
+        "engineSide": "right"
+      },
+      "compositionAvailable": false,
+      "coaches": [],
+      "coachCount": 0,
+      "compositionSource": null,
+      "divyangjanPositions": [],
+      "divyangjanCoaches": []
+    },
+    "18045": {
+      "trainNo": "18045",
+      "trainName": "EAST COAST EXP",
+      "platform": "1",
+      "from": "SHALIMAR",
+      "to": "CHARLAPALLI",
+      "expectedArrival": "16:42",
+      "expectedDeparture": "16:43",
+      "status": "Late by 58 mins",
+      "delay": 58,
+      "runningState": "scheduled",
+      "heading": {
+        "direction": "left",
+        "toward": "CHARLAPALLI",
+        "from": "SHALIMAR",
+        "engineSide": "left"
+      },
+      "compositionAvailable": true,
+      "coaches": [
+        {
+          "seq": 1,
+          "position": 0,
+          "code": "ENG",
+          "classCode": "ENG",
+          "typeId": "engine",
+          "label": "ENG",
+          "divyangjan": false
+        },
+        {
+          "seq": 2,
+          "position": 1,
+          "code": "VP",
+          "classCode": "VP",
+          "typeId": "parcel",
+          "label": "VP",
+          "divyangjan": false
+        },
+        {
+          "seq": 3,
+          "position": 2,
+          "code": "LPR",
+          "classCode": "LPR",
+          "typeId": "parcel",
+          "label": "LPR",
+          "divyangjan": false
+        },
+        {
+          "seq": 4,
+          "position": 3,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 5,
+          "position": 4,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 6,
+          "position": 5,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 7,
+          "position": 6,
+          "code": "S1",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S1",
+          "divyangjan": false
+        },
+        {
+          "seq": 8,
+          "position": 7,
+          "code": "S2",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S2",
+          "divyangjan": false
+        },
+        {
+          "seq": 9,
+          "position": 8,
+          "code": "S3",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S3",
+          "divyangjan": false
+        },
+        {
+          "seq": 10,
+          "position": 9,
+          "code": "S4",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S4",
+          "divyangjan": false
+        },
+        {
+          "seq": 11,
+          "position": 10,
+          "code": "S5",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S5",
+          "divyangjan": false
+        },
+        {
+          "seq": 12,
+          "position": 11,
+          "code": "S6",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S6",
+          "divyangjan": false
+        },
+        {
+          "seq": 13,
+          "position": 12,
+          "code": "S7",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S7",
+          "divyangjan": false
+        },
+        {
+          "seq": 14,
+          "position": 13,
+          "code": "M1",
+          "classCode": "3E",
+          "typeId": "ac3",
+          "label": "M1",
+          "divyangjan": false
+        },
+        {
+          "seq": 15,
+          "position": 14,
+          "code": "M2",
+          "classCode": "3E",
+          "typeId": "ac3",
+          "label": "M2",
+          "divyangjan": false
+        },
+        {
+          "seq": 16,
+          "position": 15,
+          "code": "BE1",
+          "classCode": "3A",
+          "typeId": "ac3",
+          "label": "BE1",
+          "divyangjan": false
+        },
+        {
+          "seq": 17,
+          "position": 16,
+          "code": "B1",
+          "classCode": "3A",
+          "typeId": "ac3",
+          "label": "B1",
+          "divyangjan": false
+        },
+        {
+          "seq": 18,
+          "position": 17,
+          "code": "B2",
+          "classCode": "3A",
+          "typeId": "ac3",
+          "label": "B2",
+          "divyangjan": false
+        },
+        {
+          "seq": 19,
+          "position": 18,
+          "code": "B3",
+          "classCode": "3A",
+          "typeId": "ac3",
+          "label": "B3",
+          "divyangjan": false
+        },
+        {
+          "seq": 20,
+          "position": 19,
+          "code": "B4",
+          "classCode": "3A",
+          "typeId": "ac3",
+          "label": "B4",
+          "divyangjan": false
+        },
+        {
+          "seq": 21,
+          "position": 20,
+          "code": "A1",
+          "classCode": "2A",
+          "typeId": "ac2",
+          "label": "A1",
+          "divyangjan": false
+        },
+        {
+          "seq": 22,
+          "position": 21,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 23,
+          "position": 22,
+          "code": "SLRD",
+          "classCode": "SLRD",
+          "typeId": "slr",
+          "label": "SLRD",
+          "divyangjan": true
+        }
+      ],
+      "coachCount": 23,
+      "compositionSource": "ntes-live-board",
+      "divyangjanPositions": [
+        22
+      ],
+      "divyangjanCoaches": [
+        {
+          "position": 22,
+          "code": "SLRD",
+          "label": "SLRD"
+        }
+      ]
+    },
+    "67762": {
+      "trainNo": "67762",
+      "trainName": "WL-SC MEMU",
+      "platform": "1",
+      "from": "WARANGAL",
+      "to": "SECUNDERABAD JN",
+      "expectedArrival": "15:54",
+      "expectedDeparture": "15:55",
+      "status": "On Time",
+      "delay": 0,
+      "runningState": "scheduled",
+      "heading": {
+        "direction": "left",
+        "toward": "SECUNDERABAD JN",
+        "from": "WARANGAL",
+        "engineSide": "left"
+      },
+      "compositionAvailable": false,
+      "coaches": [],
+      "coachCount": 0,
+      "compositionSource": null,
+      "divyangjanPositions": [],
+      "divyangjanCoaches": []
+    }
+  },
+  "focus": {
+    "platform": "2",
+    "inWindow": false,
+    "train": {
+      "trainNo": "17202",
+      "trainName": "GOLCONDA EXP",
+      "platform": "2",
+      "from": "SECUNDERABAD JN",
+      "to": "GUNTUR JN",
+      "expectedArrival": "13:24",
+      "expectedDeparture": "13:25",
+      "minutesUntil": 52,
+      "status": "On Time",
+      "delay": 0
+    },
+    "heading": {
+      "direction": "right",
+      "toward": "GUNTUR JN",
+      "from": "SECUNDERABAD JN",
+      "engineSide": "right"
+    },
+    "compositionAvailable": true,
+    "coaches": [
+      {
+        "seq": 1,
+        "position": 0,
+        "code": "ENG",
+        "classCode": "ENG",
+        "typeId": "engine",
+        "label": "ENG",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 2,
+        "position": 1,
+        "code": "SLRD",
+        "classCode": "SLRD",
+        "typeId": "slr",
+        "label": "SLRD",
+        "divyangjan": true,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 3,
+        "position": 2,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 4,
+        "position": 3,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 5,
+        "position": 4,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 6,
+        "position": 5,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 7,
+        "position": 6,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 8,
+        "position": 7,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 9,
+        "position": 8,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 10,
+        "position": 9,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 11,
+        "position": 10,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 12,
+        "position": 11,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 13,
+        "position": 12,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 14,
+        "position": 13,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 15,
+        "position": 14,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 16,
+        "position": 15,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 17,
+        "position": 16,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 18,
+        "position": 17,
+        "code": "D3",
+        "classCode": "2S",
+        "typeId": "chair",
+        "label": "D3",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 19,
+        "position": 18,
+        "code": "D2",
+        "classCode": "2S",
+        "typeId": "chair",
+        "label": "D2",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 20,
+        "position": 19,
+        "code": "D1",
+        "classCode": "2S",
+        "typeId": "chair",
+        "label": "D1",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 21,
+        "position": 20,
+        "code": "C1",
+        "classCode": "CC",
+        "typeId": "chair",
+        "label": "C1",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 22,
+        "position": 21,
+        "code": "M1",
+        "classCode": "3E",
+        "typeId": "ac3",
+        "label": "M1",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      },
+      {
+        "seq": 23,
+        "position": 22,
+        "code": "LPR",
+        "classCode": "LPR",
+        "typeId": "parcel",
+        "label": "LPR",
+        "divyangjan": false,
+        "walkMeters": null,
+        "walkSeconds": null
+      }
+    ],
+    "coachCount": 23,
+    "compositionSource": "ntes-live-board",
+    "divyangjanPositions": [
+      1
+    ],
+    "divyangjanCoaches": [
+      {
+        "position": 1,
+        "code": "SLRD",
+        "label": "SLRD"
+      }
+    ],
+    "youAreHere": {
+      "enabled": false,
+      "slotIndex": null,
+      "metersFromEngineEnd": null,
+      "alignedCoachCode": null,
+      "facing": "engine_left"
+    },
+    "nextLabel": null,
+    "featured": true
+  },
+  "platforms": [
+    {
+      "platform": "1",
+      "inWindow": false,
+      "train": null,
+      "compositionAvailable": false,
+      "coaches": [],
+      "divyangjanPositions": [],
       "youAreHere": {
         "enabled": true,
-        "slotIndex": 3,
+        "slotIndex": null,
         "metersFromEngineEnd": 75,
-        "alignedCoachCode": "S2",
+        "alignedCoachCode": null,
         "facing": "engine_left"
       },
       "nextLabel": null
     },
     {
       "platform": "2",
-      "inWindow": true,
-      "train": {
-        "trainNo": "17012",
-        "trainName": "SKZR-BIDR EXP",
-        "platform": "2",
-        "expectedArrival": "19:20",
-        "expectedDeparture": "19:20",
-        "minutesUntil": 8
-      },
-      "compositionAvailable": true,
-      "coaches": [
-        {
-          "seq": 1,
-          "code": "ENG",
-          "typeId": "engine",
-          "label": "ENG"
-        },
-        {
-          "seq": 2,
-          "code": "GS",
-          "typeId": "general",
-          "label": "GS"
-        },
-        {
-          "seq": 3,
-          "code": "S1",
-          "typeId": "sleeper",
-          "label": "S1"
-        },
-        {
-          "seq": 4,
-          "code": "S2",
-          "typeId": "sleeper",
-          "label": "S2"
-        },
-        {
-          "seq": 5,
-          "code": "B1",
-          "typeId": "ac3",
-          "label": "B1"
-        },
-        {
-          "seq": 6,
-          "code": "SLR",
-          "typeId": "slr",
-          "label": "SLR"
-        }
-      ],
-      "compositionSource": "fixture",
+      "inWindow": false,
+      "train": null,
+      "compositionAvailable": false,
+      "coaches": [],
+      "divyangjanPositions": [],
       "youAreHere": {
-        "enabled": false,
+        "enabled": true,
         "slotIndex": null,
-        "metersFromEngineEnd": null,
+        "metersFromEngineEnd": 75,
         "alignedCoachCode": null,
         "facing": "engine_left"
       },
       "nextLabel": null
     }
-  ]
+  ],
+  "liveFetchedAt": "2026-08-14T07:02:24.816Z",
+  "liveTrainCount": 5
 }

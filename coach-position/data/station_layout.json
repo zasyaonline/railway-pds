@@ -1,12 +1,35 @@
 {
-  "code": "CHZ",
-  "name": "Charlapalli",
+  "code": "BG",
+  "name": "Bhongir",
+  "screenAxis": {
+    "leftToward": [
+      "SECUNDERABAD JN",
+      "SECUNDERABAD",
+      "SC",
+      "CHARLAPALLI",
+      "CHZ",
+      "BIDAR",
+      "BIDR"
+    ],
+    "rightToward": [
+      "VIJAYAWADA JN",
+      "VIJAYAWADA",
+      "BZA",
+      "WARANGAL",
+      "WL",
+      "KAZIPET",
+      "KZJ",
+      "SIRPUR KAGHAZNAGAR",
+      "SKZR"
+    ],
+    "note": "Screen left ≈ Secunderabad / Charlapalli end; screen right ≈ Kazipet / Warangal / Vijayawada end. Confirm on site."
+  },
   "platforms": [
     {
       "id": "1",
       "name": "Platform 1",
       "islandWith": null,
-      "engineStopNote": "Engine towards Secunderabad end (confirm on site)",
+      "engineStopNote": "Confirm facing with station ops",
       "lengthMeters": 600
     },
     {
@@ -17,5 +40,5 @@
       "lengthMeters": 600
     }
   ],
-  "notes": "Placeholder layout for modelling; replace after site survey."
+  "notes": "Bhongir (BG) layout placeholder; replace after site survey."
 }
