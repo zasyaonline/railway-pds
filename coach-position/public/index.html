@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Coach Position Display</title>
   <link rel="icon" href="/img/favicon.png" type="image/png">
-  <link rel="stylesheet" href="/css/style.css?v=20260822u">
-  <link rel="stylesheet" href="/css/chart.css?v=20260822u">
+  <link rel="stylesheet" href="/css/style.css?v=20260822w">
+  <link rel="stylesheet" href="/css/chart.css?v=20260822w">
 </head>
 <body>
   <header class="header">
@@ -31,12 +31,16 @@
   <footer class="footer">
     <span id="footerMeta">Coach Position</span>
     <span id="footerWindow">Window: T−10 until departure</span>
-    <a class="theme-link" id="themeLink" href="/premium.html?station=BG&display=entrance-main">Premium TV</a>
+    <nav class="theme-nav" aria-label="Display options">
+      <a class="theme-link" id="linkCurrentTv" href="/?station=BG&display=entrance-main">Current TV</a>
+      <a class="theme-link" id="linkPremiumTv" href="/premium.html?station=BG&display=entrance-main">Premium TV</a>
+      <a class="theme-link" id="linkChartView" href="/chart.html?station=BG&display=entrance-main">Chart view</a>
+    </nav>
     <a class="admin-link" href="/admin.html">Admin</a>
   </footer>
 
   <script src="/config.js"></script>
-  <script src="/js/i18n.js?v=20260822u"></script>
-  <script src="/js/app.js?v=20260822u"></script>
+  <script src="/js/i18n.js?v=20260822w"></script>
+  <script src="/js/app.js?v=20260822w"></script>
 </body>
 </html>

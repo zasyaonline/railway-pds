@@ -1088,16 +1088,36 @@ function render(payload) {
     : '';
   const adminLink = document.querySelector('.admin-link');
   if (adminLink) adminLink.textContent = t('admin');
+  const q = displayQuery();
+  const linkCurrent = $('linkCurrentTv');
+  const linkPremium = $('linkPremiumTv');
+  const linkChart = $('linkChartView');
+  if (linkCurrent) {
+    linkCurrent.href = `/?${q}`;
+    linkCurrent.textContent = t('currentTvView');
+    linkCurrent.hidden = THEME === 'tv';
+  }
+  if (linkPremium) {
+    linkPremium.href = `/premium.html?${q}`;
+    linkPremium.textContent = t('premiumView');
+    linkPremium.hidden = THEME === 'premium';
+  }
+  if (linkChart) {
+    linkChart.href = `/chart.html?${q}`;
+    linkChart.textContent = t('chartView');
+    linkChart.hidden = THEME === 'chart';
+  }
+  /* Legacy single themeLink (older HTML) */
   const themeLink = $('themeLink');
-  if (themeLink) {
+  if (themeLink && !linkCurrent && !linkPremium && !linkChart) {
     if (THEME === 'premium') {
-      themeLink.href = `/?${displayQuery()}`;
+      themeLink.href = `/?${q}`;
       themeLink.textContent = t('currentTvView');
     } else if (THEME === 'chart') {
-      themeLink.href = `/?${displayQuery()}`;
+      themeLink.href = `/?${q}`;
       themeLink.textContent = t('tvView');
     } else {
-      themeLink.href = `/premium.html?${displayQuery()}`;
+      themeLink.href = `/premium.html?${q}`;
       themeLink.textContent = t('premiumView');
     }
   }

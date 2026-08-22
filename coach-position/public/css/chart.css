@@ -65,7 +65,12 @@ body.theme-chart .focus-panel {
 
 body.theme-chart .rake-wrap {
   min-height: 16rem;
-  overflow: hidden;
+  overflow: visible;
+}
+
+body.theme-chart .rake-stage {
+  grid-template-rows: minmax(0, 0.85fr) auto minmax(0, 1.2fr);
+  overflow: visible;
 }
 
 body.theme-chart .focus-kicker { color: #1d4ed8; }
@@ -193,6 +198,12 @@ body.theme-chart .platform-deck {
   border: none;
   box-shadow: none;
   min-height: 0;
+  overflow: visible;
+}
+
+body.theme-chart .platform-wayfind {
+  margin-top: 0.85rem;
+  overflow: visible;
 }
 
 body.theme-chart .platform-grain,

@@ -1047,6 +1047,13 @@ body {
 
 .admin-link { color: #f97316; text-decoration: none; }
 .theme-link { color: #7dd3fc; text-decoration: none; font-weight: 700; }
+.theme-nav {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+.theme-link[hidden] { display: none !important; }
 
 /* Viewport height: keep traveller + walk visible; shrink the table first.
    Driven by CSS height and body[data-vh] from visualViewport (not OS sniffing). */
