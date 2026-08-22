@@ -225,7 +225,7 @@ body.theme-chart .walk-cell .walk-dist { color: #111827; }
 body.theme-chart .walk-cell .walk-time { color: #1d4ed8; }
 body.theme-chart .walk-cell.walk-side-left .walk-labels,
 body.theme-chart .walk-cell.walk-side-right .walk-labels {
-  transform-origin: center center;
+  transform: none;
 }
 
 body.theme-chart .amenity-strip.amenity-building {

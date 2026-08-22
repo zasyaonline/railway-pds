@@ -800,7 +800,7 @@ function crossPlatformNoteHtml(youAreHere, trainPlatform, layout) {
   return `<p class="pin-note pin-note-cross">${line1}<br>${line2}</p>`;
 }
 
-function platformHtml(youAreHere, coaches, engineOnRight, platformId, layout, walkPinSlot) {
+function platformHtml(youAreHere, coaches, engineOnRight, platformId, layout, walkPinSlot, trainPlatform, bogie) {
   const count = coaches.length;
   const pinEnabled = walkPinSlot != null && count;
   let pinDisplayIndex = null;
@@ -836,6 +836,14 @@ function platformHtml(youAreHere, coaches, engineOnRight, platformId, layout, wa
   );
   const trackAmenities = amenitiesOnBuilding ? '' : amenitiesHtml;
   const buildingAmenities = amenitiesOnBuilding ? amenitiesHtml : '';
+  const fobHtml = fobBridgeOverlayHtml(
+    trainPlatform != null ? trainPlatform : platformId,
+    layout,
+    youAreHere,
+    count,
+    engineOnRight,
+    bogie
+  );
 
   return `
     <div class="platform" style="--coach-count:${count}">
@@ -843,11 +851,14 @@ function platformHtml(youAreHere, coaches, engineOnRight, platformId, layout, wa
       <div class="platform-deck">
         <div class="platform-grain" aria-hidden="true"></div>
         <div class="yellow-line" aria-hidden="true"></div>
+        ${fobHtml}
         ${trackAmenities}
         <div class="bay-ticks" aria-hidden="true">${ticks}</div>
-        ${walkStripHtml(coaches, pinEnabled, pinDisplayIndex)}
-        <div class="pin-row${pinEnabled ? '' : ' pin-row-empty'}">${pin}</div>
-        ${buildingAmenities}
+        <div class="platform-wayfind">
+          ${walkStripHtml(coaches, pinEnabled, pinDisplayIndex)}
+          <div class="pin-row${pinEnabled ? '' : ' pin-row-empty'}">${pin}</div>
+          ${buildingAmenities}
+        </div>
       </div>
     </div>`;
 }
@@ -1039,8 +1050,16 @@ function renderFocus(p, bogie, shouldArrive) {
             <div class="rail rail-near"></div>
             <div class="rail-glow"></div>
           </div>
-          ${platformHtml(p.youAreHere, coaches, engineOnRight, deckPlatform, stationLayout, walkPinSlot)}
-          ${fobBridgeOverlayHtml(p.platform, stationLayout, p.youAreHere, count, engineOnRight, bogie)}
+          ${platformHtml(
+            p.youAreHere,
+            coaches,
+            engineOnRight,
+            deckPlatform,
+            stationLayout,
+            walkPinSlot,
+            p.platform,
+            bogie
+          )}
         </div>
         ${pinNote}
       </div>
