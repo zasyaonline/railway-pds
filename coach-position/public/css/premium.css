@@ -322,21 +322,12 @@ body.theme-premium .bay-tick {
 }
 
 /*
- * ╔══════════════════════════════════════════════════════════════════╗
- * ║ FROZEN (premium) — do not change unless the user explicitly asks ║
- * ║                                                                  ║
- * ║ Walk distance + walk time stay ONLY on the platform side of the  ║
- * ║ yellow safety line. They must never cross into the track / coach ║
- * ║ zone above the yellow line.                                      ║
- * ║                                                                  ║
- * ║ Mechanism: platform-wayfind starts below the yellow line; the    ║
- * ║ walk-strip clips overflow so ±90° labels cannot bleed upward.    ║
- * ╚══════════════════════════════════════════════════════════════════╝
+ * Walk distance/time: FROZEN shared style in style.css (both TV URLs).
+ * Premium only tweaks color tokens — do not override rotation here.
  */
 body.theme-premium .platform-wayfind {
-  /* Clear the yellow line before any wayfinding content starts. */
-  margin-top: 1.25rem;
-  overflow: visible; /* traveller/amenities may extend; walk-strip self-clips */
+  margin-top: 1.2rem;
+  overflow: visible;
   padding-bottom: 0.15rem;
 }
 
@@ -345,19 +336,12 @@ body.theme-premium .platform-deck {
 }
 
 body.theme-premium .walk-strip {
-  margin-top: 0.15rem;
-  min-height: clamp(3.2rem, 6.5vh, 4.2rem);
-  /* HARD CLIP: rotated labels cannot paint above this strip (= above yellow line). */
-  overflow: hidden;
-  align-items: center;
+  min-height: clamp(3.2rem, 6.8vh, 4.4rem);
 }
 
 body.theme-premium .walk-cell {
   border-left-color: rgba(175, 196, 216, 0.12);
   position: relative;
-  overflow: hidden;
-  justify-content: center;
-  height: 100%;
 }
 
 body.theme-premium .walk-cell::before {
@@ -372,32 +356,13 @@ body.theme-premium .walk-cell::before {
   pointer-events: none;
 }
 
-body.theme-premium .walk-cell .walk-labels {
-  /* Pivot so ±90° text stays inside the clipped strip (platform side). */
-  transform-origin: center center;
-  gap: 0.12rem;
-  max-height: 100%;
-}
-
-body.theme-premium .walk-cell.walk-side-left .walk-labels {
-  transform: rotate(-90deg);
-}
-
-body.theme-premium .walk-cell.walk-side-right .walk-labels {
-  transform: rotate(90deg);
-}
-
 body.theme-premium .walk-cell .walk-dist {
-  font-size: clamp(0.78rem, calc(72vw / var(--coach-count) / 5.2), 1.2rem);
   color: #e8eef6;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
-  white-space: nowrap;
 }
 
 body.theme-premium .walk-cell .walk-time {
-  font-size: clamp(0.66rem, calc(72vw / var(--coach-count) / 6), 1.05rem);
   color: var(--p-accent);
-  white-space: nowrap;
 }
 
 body.theme-premium .walk-cell.is-here .walk-dist {

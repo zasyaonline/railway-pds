@@ -223,10 +223,7 @@ body.theme-chart .fob-bridge-art {
 body.theme-chart .walk-cell { border-left-color: rgba(148, 163, 184, 0.25); }
 body.theme-chart .walk-cell .walk-dist { color: #111827; }
 body.theme-chart .walk-cell .walk-time { color: #1d4ed8; }
-body.theme-chart .walk-cell.walk-side-left .walk-labels,
-body.theme-chart .walk-cell.walk-side-right .walk-labels {
-  transform: none;
-}
+/* Chart inherits frozen ±90° walk labels from style.css */
 
 body.theme-chart .amenity-strip.amenity-building {
   margin-top: 0;

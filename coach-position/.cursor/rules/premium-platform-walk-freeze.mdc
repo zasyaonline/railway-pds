@@ -1,17 +1,24 @@
 ---
-description: Freeze premium walk labels on the platform side of the yellow line
-globs: coach-position/public/css/premium.css,coach-position/public/js/app.js,coach-position/public/premium.html
+description: Freeze walk distance/time style on both Coach Position TV URLs
+globs: coach-position/public/css/style.css,coach-position/public/css/premium.css,coach-position/public/js/app.js,coach-position/public/index.html,coach-position/public/premium.html
 alwaysApply: false
 ---
 
-# Premium TV — frozen wayfinding rule
+# Frozen — walk distance / time (both TV URLs)
 
-On `premium.html` / `theme-premium`:
+Applies to:
 
-**Walk distance and walk time must stay on the platform side of the yellow safety line.**
+- `/?station=…&display=…` (current TV)
+- `/premium.html?station=…&display=…` (premium TV)
 
-- Never let those labels cross above the yellow line into the track/coach zone.
-- Keep ±90° / ±270° rotation if already used, but clip them inside `.walk-strip` below the yellow line.
-- Do not change this layout unless the user **explicitly** asks to move walk labels relative to the yellow line.
+**Match the reference mockup exactly:**
 
-Related CSS is marked `FROZEN (premium)` in `coach-position/public/css/premium.css`.
+1. Labels sit on the **platform side** of the yellow line (below it).
+2. Left of You-are-here: `rotate(-90deg)`.
+3. Right of You-are-here: `rotate(90deg)`.
+4. Stack order: **meters** then **walk time** (`22m` / `walk 34 sec`).
+5. Distances radiate outward from the pin in both directions.
+
+Canonical CSS: `coach-position/public/css/style.css` (block marked `FROZEN (both TV URLs)`).
+
+Do **not** change this unless the user explicitly asks.
