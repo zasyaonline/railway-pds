@@ -42,11 +42,20 @@
     {
       "id": "2",
       "name": "Platform 2",
-      "islandWith": null,
+      "islandWith": "3",
       "lengthMeters": 576,
       "secunderabadMarker": 25,
       "kazipetMarker": 1,
-      "engineStopNote": "Markers 25→1 left to right (opposite numbering to PF1). Platform from NTES live board."
+      "engineStopNote": "Markers 25→1 left to right (opposite numbering to PF1). Island with PF3; one FOB serves both faces."
+    },
+    {
+      "id": "3",
+      "name": "Platform 3",
+      "islandWith": "2",
+      "lengthMeters": 576,
+      "secunderabadMarker": 25,
+      "kazipetMarker": 1,
+      "engineStopNote": "Opposite face of PF2 island. Same foot over bridge as PF2."
     }
   ],
   "amenities": [
@@ -107,7 +116,8 @@
       "markerTo": 15,
       "walkMetersFromDisplayPin": 178,
       "category": "circulation",
-      "linksTo": "fob-pf2"
+      "linksTo": "fob-pf2",
+      "linksToPlatforms": ["2", "3"]
     },
     {
       "id": "fob-pf2",
@@ -127,5 +137,5 @@
       "category": "passenger"
     }
   ],
-  "notes": "Bhuvanagiri (BG) Platform 1 & 2 layout from site survey (Aug 2026). Station also known as Bhongir."
+  "notes": "Bhuvanagiri (BG) Platform 1, 2 & 3 layout from site survey (Aug 2026). PF2 and PF3 are island faces; single FOB from PF1 at 178 m walk. Station also known as Bhongir."
 }

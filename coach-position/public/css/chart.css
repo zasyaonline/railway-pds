@@ -115,17 +115,24 @@ body.theme-chart .coach {
 
 body.theme-chart .coach .num {
   position: static;
-  background: none;
-  color: #111827;
-  min-width: 0;
-  height: auto;
-  font-size: clamp(0.7rem, calc(72vw / var(--coach-count) / 6), 1.05rem);
-  font-weight: 600;
+  background: #f97316;
+  color: #0b1220;
+  min-width: clamp(1rem, calc(62vw / var(--coach-count) / 5.5), 1.65rem);
+  height: clamp(1rem, calc(62vw / var(--coach-count) / 5.5), 1.65rem);
+  font-size: clamp(0.62rem, calc(62vw / var(--coach-count) / 7), 0.95rem);
+  font-weight: 800;
   margin-bottom: 0.05rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
 body.theme-chart .coach-art {
-  max-height: clamp(2.4rem, calc(28vh / 1.6), calc(92vw / var(--coach-count) * 0.85));
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: min(100%, calc(92vw / var(--coach-count) * 1.1));
 }
 
 body.theme-chart .coach .code {
@@ -185,7 +192,7 @@ body.theme-chart .platform-deck {
   background: #f7f8fc;
   border: none;
   box-shadow: none;
-  min-height: clamp(6.6rem, 16vh, 8.6rem);
+  min-height: 0;
 }
 
 body.theme-chart .platform-grain,
@@ -210,7 +217,7 @@ body.theme-chart .amenity-access-badge {
 }
 
 body.theme-chart .fob-bridge-art {
-  opacity: 0.31;
+  opacity: 0.75;
 }
 
 body.theme-chart .walk-cell { border-left-color: rgba(148, 163, 184, 0.25); }
@@ -223,8 +230,8 @@ body.theme-chart .walk-cell.walk-side-right .walk-labels {
 
 body.theme-chart .amenity-strip.amenity-building {
   margin-top: 0;
-  margin-bottom: 0.25rem;
-  height: clamp(3.8rem, 8vh, 5.2rem);
+  margin-bottom: 0.12rem;
+  height: clamp(2rem, 4vh, 2.6rem);
 }
 
 body.theme-chart .amenity-icon {

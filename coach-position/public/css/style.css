@@ -274,19 +274,17 @@ body {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  min-height: 14rem;
+  min-height: 0;
   overflow: hidden;
 }
 
 .rake-stage {
   position: relative;
   width: 100%;
-  min-height: 0;
   flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
   --coach-count: 12;
   --coach-gap: 1px;
   padding-bottom: 0;
@@ -294,15 +292,18 @@ body {
 }
 
 .rake {
+  grid-row: 1;
   display: flex;
   width: 100%;
   gap: var(--coach-gap);
   overflow: hidden;
-  padding: 0.45rem 0 0;
+  padding: 0.15rem 0 0;
   z-index: 3;
   position: relative;
-  flex: 0 1 auto;
   min-height: 0;
+  align-self: end;
+  align-items: stretch;
+  height: 100%;
 }
 
 .rake.is-arriving {
@@ -373,6 +374,7 @@ body {
   min-width: 0;
   width: auto;
   min-height: 0;
+  height: 100%;
   border-radius: clamp(3px, 0.35vw, 8px);
   border: 2px solid rgba(255,255,255,0.08);
   background: rgba(8, 16, 32, 0.55);
@@ -380,38 +382,42 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.05rem;
+  gap: 0.04rem;
   font-weight: 700;
   position: relative;
-  padding: 0.18rem 0.08rem 0.22rem;
+  padding: 0.12rem 0.06rem 0.15rem;
   overflow: visible;
   z-index: 3;
-  --tile-fs: clamp(0.38rem, calc(96vw / var(--coach-count) / 8.6), 0.95rem);
+  --tile-fs: clamp(0.42rem, calc(96vw / var(--coach-count) / 7.2), 1.05rem);
 }
 
 .coach .num {
   position: absolute;
-  top: 0.12rem;
-  left: 0.12rem;
-  min-width: clamp(0.72rem, calc(48vw / var(--coach-count) / 8), 1.15rem);
-  height: clamp(0.72rem, calc(48vw / var(--coach-count) / 8), 1.15rem);
-  padding: 0 0.12rem;
+  top: 0.06rem;
+  left: 0.06rem;
+  min-width: clamp(1rem, calc(62vw / var(--coach-count) / 5.5), 1.75rem);
+  height: clamp(1rem, calc(62vw / var(--coach-count) / 5.5), 1.75rem);
+  padding: 0 0.14rem;
   border-radius: 999px;
   background: #f97316;
   color: #0b1220;
-  font-size: clamp(0.45rem, calc(48vw / var(--coach-count) / 10), 0.68rem);
+  font-size: clamp(0.58rem, calc(62vw / var(--coach-count) / 7), 0.95rem);
   font-weight: 800;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1;
+  z-index: 12;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.55);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
 }
 
 .coach-art {
   width: 100%;
   height: auto;
-  max-height: clamp(1.55rem, calc(40vh / 2.8), calc(92vw / var(--coach-count) * 0.58));
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: min(100%, calc(92vw / var(--coach-count) * 1.15));
   object-fit: contain;
   display: block;
   pointer-events: none;
@@ -494,9 +500,10 @@ body {
 
 /* —— Track / rails —— */
 .track {
+  grid-row: 2;
   position: relative;
-  height: clamp(1.35rem, 2.4vh, 1.9rem);
-  margin-top: -0.15rem;
+  height: clamp(1rem, 1.8vh, 1.45rem);
+  margin-top: -0.1rem;
   z-index: 1;
   overflow: hidden;
   border-radius: 0 0 6px 6px;
@@ -601,15 +608,18 @@ body {
 
 /* —— Platform deck (where the traveler stands) —— */
 .platform {
+  grid-row: 3;
   position: relative;
-  margin-top: -0.1rem;
+  margin-top: -0.05rem;
   z-index: 8;
-  flex-shrink: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   --coach-count: 12;
 }
 
 .platform-coping {
-  height: 0.35rem;
+  height: 0.22rem;
   background: linear-gradient(180deg, #64748b, #334155);
   border-radius: 2px 2px 0 0;
   box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.12);
@@ -620,16 +630,19 @@ body {
 .platform-deck {
   position: relative;
   z-index: 2;
-  flex-shrink: 0;
-  min-height: clamp(8.6rem, 19vh, 10.8rem);
-  padding: 0.4rem 0.2rem 0.4rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0.18rem 0.15rem 0.12rem;
   background:
     linear-gradient(180deg, #3f4a5c 0%, #2a3344 28%, #1e2636 100%);
   border: 1px solid #475569;
   border-top: none;
   border-radius: 0 0 8px 8px;
   overflow: visible;
-  box-shadow: inset 0 8px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.25);
 }
 
 .platform-grain {
@@ -696,17 +709,18 @@ body {
 .amenity-strip.amenity-track {
   position: relative;
   z-index: 3;
-  height: clamp(2.8rem, 6vh, 3.6rem);
-  margin: 0.35rem 0.4rem 0.15rem;
+  height: clamp(1.4rem, 3vh, 1.8rem);
+  margin: 0.15rem 0.35rem 0.08rem;
   pointer-events: none;
 }
 
 .amenity-strip.amenity-building {
   position: relative;
   z-index: 1;
-  height: clamp(4.2rem, 9vh, 5.8rem);
-  margin: 0.05rem 0.4rem 0.35rem;
+  height: clamp(2.1rem, 4.5vh, 2.9rem);
+  margin: 0.02rem 0.35rem 0.12rem;
   pointer-events: none;
+  flex-shrink: 0;
 }
 
 .amenity-strip {
@@ -731,21 +745,33 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
+  gap: 0.04rem;
   max-width: min(14vw, 5.5rem);
   text-align: center;
 }
 
-.amenity-pin.amenity-stack-1 { bottom: 0.15rem; }
-.amenity-pin.amenity-stack-2 { bottom: 0.3rem; }
+.amenity-pin.amenity-stack-1 { bottom: 0.08rem; }
+.amenity-pin.amenity-stack-2 { bottom: 0.16rem; }
 
 .amenity-icon {
-  width: clamp(2.6rem, 6vw, 4.2rem);
+  width: clamp(1.5rem, 3.2vw, 2.4rem);
   height: auto;
-  max-height: clamp(3.2rem, 8vh, 5rem);
+  max-height: clamp(1.8rem, 4vh, 2.6rem);
   display: block;
   object-fit: contain;
   object-position: center bottom;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+}
+
+.amenity-label {
+  font-size: clamp(0.55rem, calc(70vw / var(--coach-count) / 6.2), 0.82rem);
+  font-weight: 700;
+  color: #cbd5e1;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(14vw, 5.5rem);
 }
 
 .amenity-pin.amenity-fob .amenity-icon {
@@ -798,7 +824,7 @@ body {
   height: 100%;
   object-fit: contain;
   object-position: left bottom;
-  opacity: 0.375;
+  opacity: 0.75;
   filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.55));
 }
 
@@ -808,11 +834,11 @@ body {
   display: flex;
   width: 100%;
   gap: var(--coach-gap, 1px);
-  margin-top: 1.05rem;
-  margin-bottom: 0.1rem;
+  margin-top: 0.45rem;
+  margin-bottom: 0.05rem;
   pointer-events: none;
   flex-shrink: 0;
-  min-height: clamp(3.2rem, 7vh, 4.2rem);
+  min-height: clamp(1.5rem, 3.2vh, 2rem);
 }
 
 .walk-cell {
@@ -872,8 +898,8 @@ body {
   position: relative;
   z-index: 9;
   flex-shrink: 0;
-  height: clamp(4.8rem, 11.5vh, 6.4rem);
-  margin-top: 0.1rem;
+  height: clamp(2.2rem, 5.5vh, 3rem);
+  margin-top: 0.05rem;
   pointer-events: none;
 }
 
@@ -902,7 +928,7 @@ body {
 }
 
 .you-pin .traveler {
-  height: clamp(4.2rem, 10vh, 5.8rem);
+  height: clamp(2rem, 5vh, 2.8rem);
   width: auto;
   max-height: 100%;
   display: block;
@@ -1003,10 +1029,8 @@ body {
   .station-board-panel { max-height: 22%; }
   .station-board tbody tr:nth-child(n+4) { display: none; }
   .focus-panel { padding: 0.45rem 0.7rem 0.4rem; gap: 0.3rem; }
-  .rake-wrap { min-height: 12rem; }
-  .platform-deck { min-height: 6.2rem; }
-  .pin-row { height: 4rem; }
-  .you-pin .traveler { height: 3.2rem; }
+  .pin-row { height: 2rem; }
+  .you-pin .traveler { height: 1.75rem; }
   .footer { padding: 0.35rem 1rem; font-size: 0.8rem; }
 }
 
@@ -1014,10 +1038,8 @@ body {
   .station-board-panel { display: none; }
   .subtitle, .clock-date { display: none; }
   .heading-banner { padding: 0.25rem 0.7rem; font-size: 0.9rem; }
-  .rake-wrap { min-height: 10.5rem; }
-  .platform-deck { min-height: 5.4rem; }
-  .pin-row { height: 3.6rem; }
-  .you-pin .traveler { height: 2.8rem; }
+  .pin-row { height: 1.75rem; }
+  .you-pin .traveler { height: 1.55rem; }
 }
 
 body[data-vh="short"] .station-board-panel { max-height: 22%; }

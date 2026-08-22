@@ -55,7 +55,8 @@ window.COACH_I18N = {
     amenityWaiting: 'Waiting room',
     amenityOffice: 'Station Master',
     amenitySecurity: 'RPF',
-    useFobToReach: 'Use the {fob} to reach platform {n}.'
+    useFobToReach: 'Use the {fob} to reach platform {n}.',
+    useFobToReachWithWalk: 'Walk {dist} ({time}) to the {fob} shown, then cross to platform {n}.'
   },
   te: {
     lang: 'తె',
@@ -111,7 +112,8 @@ window.COACH_I18N = {
     amenityWaiting: 'వేచిచూసే గది',
     amenityOffice: 'స్టేషన్ మాస్టర్',
     amenitySecurity: 'RPF',
-    useFobToReach: 'ప్లాట్‌ఫామ్ {n}కి {fob} ఉపయోగించండి.'
+    useFobToReach: 'ప్లాట్‌ఫామ్ {n}కి {fob} ఉపయోగించండి.',
+    useFobToReachWithWalk: 'చిత్రంలో కనిపించే {fob} వరకు {dist} ({time}) నడవండి, ఆపై ప్లాట్‌ఫామ్ {n}కి చేరుకోండి.'
   },
   hi: {
     lang: 'हि',
@@ -167,7 +169,8 @@ window.COACH_I18N = {
     amenityWaiting: 'प्रतीक्षा कक्ष',
     amenityOffice: 'स्टेशन मास्टर',
     amenitySecurity: 'RPF',
-    useFobToReach: 'प्लेटफ़ॉर्म {n} तक पहुँचने के लिए {fob} का उपयोग करें।'
+    useFobToReach: 'प्लेटफ़ॉर्म {n} तक पहुँचने के लिए {fob} का उपयोग करें।',
+    useFobToReachWithWalk: 'चित्र में दिखाए {fob} तक {dist} ({time}) चलें, फिर प्लेटफ़ॉर्म {n} पर पहुँचें।'
   }
 };
 

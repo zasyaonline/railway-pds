@@ -146,6 +146,16 @@
           "type": "string",
           "description": "Amenity id on another platform (e.g. FOB landing on opposite PF)"
         },
+        "linksToPlatforms": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Platform ids reachable via this circulation amenity (e.g. FOB from PF1 to island PF2/PF3)"
+        },
+        "walkMetersFromDisplayPin": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Walk distance from the linked display pin to this amenity (meters)"
+        },
         "note": {
           "type": "string",
           "description": "Ops note when marker position is TBD"
