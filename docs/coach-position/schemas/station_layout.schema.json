@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coach-position.zasya.online/schemas/station_layout.schema.json",
   "title": "StationLayout",
-  "description": "Optional per-station geometry notes for coach-position displays",
+  "description": "Per-station geometry, screen axis, marker grid, and amenities for coach-position displays",
   "type": "object",
   "additionalProperties": false,
   "required": ["code", "platforms"],
@@ -13,6 +13,55 @@
       "maxLength": 6
     },
     "name": { "type": "string" },
+    "screenAxis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "leftToward": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Station names / codes toward screen left (typically UP / Secunderabad end)"
+        },
+        "rightToward": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Station names / codes toward screen right (typically DOWN / Kazipet end)"
+        },
+        "leftLabels": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Legacy alias for leftToward"
+        },
+        "rightLabels": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Legacy alias for rightToward"
+        },
+        "note": { "type": "string" }
+      }
+    },
+    "markerGrid": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spacingMeters"],
+      "properties": {
+        "spacingMeters": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Distance between consecutive platform marker posts"
+        },
+        "secunderabadEnd": {
+          "type": "string",
+          "enum": ["left", "right"],
+          "description": "Which screen edge is the Secunderabad / UP end on the layout diagram"
+        },
+        "kazipetEnd": {
+          "type": "string",
+          "enum": ["left", "right"],
+          "description": "Which screen edge is the Kazipet / DOWN end on the layout diagram"
+        }
+      }
+    },
     "platforms": {
       "type": "array",
       "minItems": 1,
@@ -31,10 +80,77 @@
             "type": "string",
             "description": "Ops note for where engine typically stops"
           },
-          "lengthMeters": { "type": ["number", "null"] }
+          "lengthMeters": { "type": ["number", "null"] },
+          "secunderabadMarker": {
+            "type": ["integer", "null"],
+            "description": "Marker number at the Secunderabad / UP end of this platform"
+          },
+          "kazipetMarker": {
+            "type": ["integer", "null"],
+            "description": "Marker number at the Kazipet / DOWN end of this platform"
+          }
         }
       }
     },
+    "amenities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Amenity" }
+    },
     "notes": { "type": "string" }
+  },
+  "$defs": {
+    "AmenityCategory": {
+      "type": "string",
+      "enum": [
+        "passenger",
+        "accessibility",
+        "waiting",
+        "admin",
+        "utility",
+        "display",
+        "circulation",
+        "security"
+      ]
+    },
+    "Amenity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "platform", "category"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable id within this station layout"
+        },
+        "label": {
+          "type": "string",
+          "description": "Passenger-facing or ops label"
+        },
+        "platform": {
+          "type": "string",
+          "description": "Platform id this amenity is on"
+        },
+        "markerFrom": {
+          "type": ["number", "integer", "null"],
+          "description": "Start marker along platform (inclusive); null if unknown"
+        },
+        "markerTo": {
+          "type": ["number", "integer", "null"],
+          "description": "End marker along platform (inclusive); null if unknown"
+        },
+        "category": { "$ref": "#/$defs/AmenityCategory" },
+        "displayId": {
+          "type": "string",
+          "description": "Linked coach-position display profile id (category display)"
+        },
+        "linksTo": {
+          "type": "string",
+          "description": "Amenity id on another platform (e.g. FOB landing on opposite PF)"
+        },
+        "note": {
+          "type": "string",
+          "description": "Ops note when marker position is TBD"
+        }
+      }
+    }
   }
 }

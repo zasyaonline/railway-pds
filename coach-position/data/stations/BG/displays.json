@@ -1,7 +1,7 @@
 {
   "stationCode": "BG",
   "stationName": "BHONGIR",
-  "bogieLengthMeters": 25,
+  "bogieLengthMeters": 22.3,
   "showBeforeMinutes": 10,
   "hideAfterDepartMinutes": 0,
   "lookAheadHours": 4,
@@ -21,20 +21,8 @@
       ],
       "youAreHere": {
         "platform": "1",
-        "metersFromEngineEnd": 75,
-        "facing": "engine_left"
-      }
-    },
-    {
-      "id": "pf2-mid",
-      "name": "Platform 2 mid",
-      "mode": "single",
-      "platformsShown": [
-        "2"
-      ],
-      "youAreHere": {
-        "platform": "2",
-        "metersFromEngineEnd": 50,
+        "slotIndex": 7,
+        "metersFromEngineEnd": 167,
         "facing": "engine_left"
       }
     }

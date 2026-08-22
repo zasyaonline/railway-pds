@@ -1,12 +1,12 @@
 {
   "stationCode": "BG",
   "stationName": "BHONGIR",
-  "generatedAt": "2026-08-14T11:57:32.148Z",
+  "generatedAt": "2026-08-22T15:44:25.680Z",
   "dataSource": "ntes-live",
   "showBeforeMinutes": 10,
   "hideAfterDepartMinutes": 0,
   "lookAheadHours": 4,
-  "bogieLengthMeters": 25,
+  "bogieLengthMeters": 22.3,
   "walkSpeedMps": 0.65,
   "languages": [
     "en",
@@ -24,95 +24,12 @@
     "facing": "engine_left",
     "youAreHere": {
       "platform": "1",
-      "metersFromEngineEnd": 75,
+      "slotIndex": 7,
+      "metersFromEngineEnd": 167,
       "facing": "engine_left"
     }
   },
   "stationBoard": [
-    {
-      "trainNo": "17012",
-      "trainName": "SKZR BIDR EXP",
-      "from": "SIRPUR KAGHAZNAGAR",
-      "to": "BIDAR",
-      "platform": "1",
-      "expectedArrival": "17:09",
-      "expectedDeparture": "17:10",
-      "status": "On Time",
-      "delay": 0,
-      "runningState": "scheduled",
-      "minutesUntil": -17,
-      "ad": "A/D"
-    },
-    {
-      "trainNo": "18045",
-      "trainName": "EAST COAST EXP",
-      "from": "SHALIMAR",
-      "to": "CHARLAPALLI",
-      "platform": "1",
-      "expectedArrival": "17:26",
-      "expectedDeparture": "17:27",
-      "status": "Late by 102 mins",
-      "delay": 102,
-      "runningState": "scheduled",
-      "minutesUntil": 0,
-      "ad": "A/D"
-    },
-    {
-      "trainNo": "17659",
-      "trainName": "SC BDCR EXP",
-      "from": "SECUNDERABAD JN",
-      "to": "BHADRACHALAM RD",
-      "platform": "2",
-      "expectedArrival": "18:04",
-      "expectedDeparture": "18:05",
-      "status": "On Time",
-      "delay": 0,
-      "runningState": "scheduled",
-      "minutesUntil": 37,
-      "ad": "A/D"
-    },
-    {
-      "trainNo": "12758",
-      "trainName": "SKZR SC SF EXP",
-      "from": "SIRPUR KAGHAZNAGAR",
-      "to": "SECUNDERABAD JN",
-      "platform": "1",
-      "expectedArrival": "19:09",
-      "expectedDeparture": "19:10",
-      "status": "On Time",
-      "delay": 0,
-      "runningState": "scheduled",
-      "minutesUntil": 102,
-      "ad": "A/D"
-    },
-    {
-      "trainNo": "67763",
-      "trainName": "SC-KZJ MEMU",
-      "from": "SECUNDERABAD JN",
-      "to": "KAZIPET JN",
-      "platform": "2",
-      "expectedArrival": "19:59",
-      "expectedDeparture": "20:00",
-      "status": "On Time",
-      "delay": 0,
-      "runningState": "scheduled",
-      "minutesUntil": 152,
-      "ad": "A/D"
-    },
-    {
-      "trainNo": "17405",
-      "trainName": "KRISHNA EXPRESS",
-      "from": "TIRUPATI",
-      "to": "ADILABAD",
-      "platform": "1",
-      "expectedArrival": "20:28",
-      "expectedDeparture": "20:29",
-      "status": "Late by 54 mins",
-      "delay": 54,
-      "runningState": "scheduled",
-      "minutesUntil": 181,
-      "ad": "A/D"
-    },
     {
       "trainNo": "12705",
       "trainName": "SC INTERCITY SF",
@@ -124,7 +41,35 @@
       "status": "On Time",
       "delay": 0,
       "runningState": "scheduled",
-      "minutesUntil": 227,
+      "minutesUntil": 0,
+      "ad": "A/D"
+    },
+    {
+      "trainNo": "12738",
+      "trainName": "GOUTAMI SF EXP",
+      "from": "LINGAMPALLI",
+      "to": "KAKINADA PORT",
+      "platform": "3",
+      "expectedArrival": "21:59",
+      "expectedDeparture": "22:00",
+      "status": "On Time",
+      "delay": 0,
+      "runningState": "scheduled",
+      "minutesUntil": 45,
+      "ad": "A/D"
+    },
+    {
+      "trainNo": "12721",
+      "trainName": "DAKSHIN SF EXP",
+      "from": "HYDERABAD",
+      "to": "HAZRAT NIZAMUDDIN JN",
+      "platform": "2",
+      "expectedArrival": "00:09",
+      "expectedDeparture": "00:10",
+      "status": "On Time",
+      "delay": 0,
+      "runningState": "scheduled",
+      "minutesUntil": 175,
       "ad": "A/D"
     }
   ],
@@ -369,426 +314,21 @@
         }
       ]
     },
-    "12758": {
-      "trainNo": "12758",
-      "trainName": "SKZR SC SF EXP",
-      "platform": "1",
-      "from": "SIRPUR KAGHAZNAGAR",
-      "to": "SECUNDERABAD JN",
-      "expectedArrival": "19:09",
-      "expectedDeparture": "19:10",
+    "12721": {
+      "trainNo": "12721",
+      "trainName": "DAKSHIN SF EXP",
+      "platform": "2",
+      "from": "HYDERABAD",
+      "to": "HAZRAT NIZAMUDDIN JN",
+      "expectedArrival": "00:09",
+      "expectedDeparture": "00:10",
       "status": "On Time",
       "delay": 0,
-      "runningState": "scheduled",
-      "heading": {
-        "direction": "left",
-        "toward": "SECUNDERABAD JN",
-        "from": "SIRPUR KAGHAZNAGAR",
-        "engineSide": "left"
-      },
-      "compositionAvailable": true,
-      "coaches": [
-        {
-          "seq": 1,
-          "position": 0,
-          "code": "ENG",
-          "classCode": "ENG",
-          "typeId": "engine",
-          "label": "ENG",
-          "divyangjan": false
-        },
-        {
-          "seq": 2,
-          "position": 1,
-          "code": "LPR",
-          "classCode": "LPR",
-          "typeId": "parcel",
-          "label": "LPR",
-          "divyangjan": false
-        },
-        {
-          "seq": 3,
-          "position": 2,
-          "code": "M1",
-          "classCode": "3E",
-          "typeId": "ac3",
-          "label": "M1",
-          "divyangjan": false
-        },
-        {
-          "seq": 4,
-          "position": 3,
-          "code": "C1",
-          "classCode": "CC",
-          "typeId": "chair",
-          "label": "C1",
-          "divyangjan": false
-        },
-        {
-          "seq": 5,
-          "position": 4,
-          "code": "D1",
-          "classCode": "2S",
-          "typeId": "chair",
-          "label": "D1",
-          "divyangjan": false
-        },
-        {
-          "seq": 6,
-          "position": 5,
-          "code": "D2",
-          "classCode": "2S",
-          "typeId": "chair",
-          "label": "D2",
-          "divyangjan": false
-        },
-        {
-          "seq": 7,
-          "position": 6,
-          "code": "D3",
-          "classCode": "2S",
-          "typeId": "chair",
-          "label": "D3",
-          "divyangjan": false
-        },
-        {
-          "seq": 8,
-          "position": 7,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 9,
-          "position": 8,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 10,
-          "position": 9,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 11,
-          "position": 10,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 12,
-          "position": 11,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 13,
-          "position": 12,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 14,
-          "position": 13,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 15,
-          "position": 14,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 16,
-          "position": 15,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 17,
-          "position": 16,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 18,
-          "position": 17,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 19,
-          "position": 18,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 20,
-          "position": 19,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 21,
-          "position": 20,
-          "code": "SLRD",
-          "classCode": "SLRD",
-          "typeId": "slr",
-          "label": "SLRD",
-          "divyangjan": true
-        }
-      ],
-      "coachCount": 21,
-      "compositionSource": "ntes-live-board",
-      "divyangjanPositions": [
-        20
-      ],
-      "divyangjanCoaches": [
-        {
-          "position": 20,
-          "code": "SLRD",
-          "label": "SLRD"
-        }
-      ]
-    },
-    "17012": {
-      "trainNo": "17012",
-      "trainName": "SKZR BIDR EXP",
-      "platform": "1",
-      "from": "SIRPUR KAGHAZNAGAR",
-      "to": "BIDAR",
-      "expectedArrival": "17:09",
-      "expectedDeparture": "17:10",
-      "status": "On Time",
-      "delay": 0,
-      "runningState": "scheduled",
-      "heading": {
-        "direction": "left",
-        "toward": "BIDAR",
-        "from": "SIRPUR KAGHAZNAGAR",
-        "engineSide": "left"
-      },
-      "compositionAvailable": true,
-      "coaches": [
-        {
-          "seq": 1,
-          "position": 0,
-          "code": "ENG",
-          "classCode": "ENG",
-          "typeId": "engine",
-          "label": "ENG",
-          "divyangjan": false
-        },
-        {
-          "seq": 2,
-          "position": 1,
-          "code": "SLRD",
-          "classCode": "SLRD",
-          "typeId": "slr",
-          "label": "SLRD",
-          "divyangjan": true
-        },
-        {
-          "seq": 3,
-          "position": 2,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 4,
-          "position": 3,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 5,
-          "position": 4,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 6,
-          "position": 5,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 7,
-          "position": 6,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 8,
-          "position": 7,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 9,
-          "position": 8,
-          "code": "C1",
-          "classCode": "CC",
-          "typeId": "chair",
-          "label": "C1",
-          "divyangjan": false
-        },
-        {
-          "seq": 10,
-          "position": 9,
-          "code": "C2",
-          "classCode": "CC",
-          "typeId": "chair",
-          "label": "C2",
-          "divyangjan": false
-        },
-        {
-          "seq": 11,
-          "position": 10,
-          "code": "D1",
-          "classCode": "2S",
-          "typeId": "chair",
-          "label": "D1",
-          "divyangjan": false
-        },
-        {
-          "seq": 12,
-          "position": 11,
-          "code": "D2",
-          "classCode": "2S",
-          "typeId": "chair",
-          "label": "D2",
-          "divyangjan": false
-        },
-        {
-          "seq": 13,
-          "position": 12,
-          "code": "D3",
-          "classCode": "2S",
-          "typeId": "chair",
-          "label": "D3",
-          "divyangjan": false
-        },
-        {
-          "seq": 14,
-          "position": 13,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 15,
-          "position": 14,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 16,
-          "position": 15,
-          "code": "SLRD",
-          "classCode": "SLRD",
-          "typeId": "slr",
-          "label": "SLRD",
-          "divyangjan": true
-        }
-      ],
-      "coachCount": 16,
-      "compositionSource": "ntes-live-board",
-      "divyangjanPositions": [
-        1,
-        15
-      ],
-      "divyangjanCoaches": [
-        {
-          "position": 1,
-          "code": "SLRD",
-          "label": "SLRD"
-        },
-        {
-          "position": 15,
-          "code": "SLRD",
-          "label": "SLRD"
-        }
-      ]
-    },
-    "17405": {
-      "trainNo": "17405",
-      "trainName": "KRISHNA EXPRESS",
-      "platform": "1",
-      "from": "TIRUPATI",
-      "to": "ADILABAD",
-      "expectedArrival": "20:28",
-      "expectedDeparture": "20:29",
-      "status": "Late by 54 mins",
-      "delay": 54,
       "runningState": "scheduled",
       "heading": {
         "direction": "unknown",
-        "toward": "ADILABAD",
-        "from": "TIRUPATI",
+        "toward": "HAZRAT NIZAMUDDIN JN",
+        "from": "HYDERABAD",
         "engineSide": "left"
       },
       "compositionAvailable": true,
@@ -832,123 +372,6 @@
         {
           "seq": 5,
           "position": 4,
-          "code": "S14",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S14",
-          "divyangjan": false
-        },
-        {
-          "seq": 6,
-          "position": 5,
-          "code": "S13",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S13",
-          "divyangjan": false
-        },
-        {
-          "seq": 7,
-          "position": 6,
-          "code": "S12",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S12",
-          "divyangjan": false
-        },
-        {
-          "seq": 8,
-          "position": 7,
-          "code": "S11",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S11",
-          "divyangjan": false
-        },
-        {
-          "seq": 9,
-          "position": 8,
-          "code": "S10",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S10",
-          "divyangjan": false
-        },
-        {
-          "seq": 10,
-          "position": 9,
-          "code": "S9",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S9",
-          "divyangjan": false
-        },
-        {
-          "seq": 11,
-          "position": 10,
-          "code": "S8",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S8",
-          "divyangjan": false
-        },
-        {
-          "seq": 12,
-          "position": 11,
-          "code": "S7",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S7",
-          "divyangjan": false
-        },
-        {
-          "seq": 13,
-          "position": 12,
-          "code": "S6",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S6",
-          "divyangjan": false
-        },
-        {
-          "seq": 14,
-          "position": 13,
-          "code": "S5",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S5",
-          "divyangjan": false
-        },
-        {
-          "seq": 15,
-          "position": 14,
-          "code": "S4",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S4",
-          "divyangjan": false
-        },
-        {
-          "seq": 16,
-          "position": 15,
-          "code": "S3",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S3",
-          "divyangjan": false
-        },
-        {
-          "seq": 17,
-          "position": 16,
-          "code": "S2",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S2",
-          "divyangjan": false
-        },
-        {
-          "seq": 18,
-          "position": 17,
           "code": "S1",
           "classCode": "SL",
           "typeId": "sleeper",
@@ -956,26 +379,80 @@
           "divyangjan": false
         },
         {
-          "seq": 19,
-          "position": 18,
-          "code": "B4",
-          "classCode": "3A",
-          "typeId": "ac3",
-          "label": "B4",
+          "seq": 6,
+          "position": 5,
+          "code": "S2",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S2",
           "divyangjan": false
         },
         {
-          "seq": 20,
-          "position": 19,
-          "code": "B3",
-          "classCode": "3A",
-          "typeId": "ac3",
-          "label": "B3",
+          "seq": 7,
+          "position": 6,
+          "code": "S3",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S3",
           "divyangjan": false
         },
         {
-          "seq": 21,
-          "position": 20,
+          "seq": 8,
+          "position": 7,
+          "code": "S4",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S4",
+          "divyangjan": false
+        },
+        {
+          "seq": 9,
+          "position": 8,
+          "code": "S5",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S5",
+          "divyangjan": false
+        },
+        {
+          "seq": 10,
+          "position": 9,
+          "code": "S6",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S6",
+          "divyangjan": false
+        },
+        {
+          "seq": 11,
+          "position": 10,
+          "code": "S7",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S7",
+          "divyangjan": false
+        },
+        {
+          "seq": 12,
+          "position": 11,
+          "code": "PC",
+          "classCode": "PC",
+          "typeId": "pantry",
+          "label": "PC",
+          "divyangjan": false
+        },
+        {
+          "seq": 13,
+          "position": 12,
+          "code": "B1",
+          "classCode": "3A",
+          "typeId": "ac3",
+          "label": "B1",
+          "divyangjan": false
+        },
+        {
+          "seq": 14,
+          "position": 13,
           "code": "B2",
           "classCode": "3A",
           "typeId": "ac3",
@@ -983,12 +460,315 @@
           "divyangjan": false
         },
         {
+          "seq": 15,
+          "position": 14,
+          "code": "B3",
+          "classCode": "3A",
+          "typeId": "ac3",
+          "label": "B3",
+          "divyangjan": false
+        },
+        {
+          "seq": 16,
+          "position": 15,
+          "code": "B4",
+          "classCode": "3A",
+          "typeId": "ac3",
+          "label": "B4",
+          "divyangjan": false
+        },
+        {
+          "seq": 17,
+          "position": 16,
+          "code": "B5",
+          "classCode": "3A",
+          "typeId": "ac3",
+          "label": "B5",
+          "divyangjan": false
+        },
+        {
+          "seq": 18,
+          "position": 17,
+          "code": "A1",
+          "classCode": "2A",
+          "typeId": "ac2",
+          "label": "A1",
+          "divyangjan": false
+        },
+        {
+          "seq": 19,
+          "position": 18,
+          "code": "A2",
+          "classCode": "2A",
+          "typeId": "ac2",
+          "label": "A2",
+          "divyangjan": false
+        },
+        {
+          "seq": 20,
+          "position": 19,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 21,
+          "position": 20,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
           "seq": 22,
           "position": 21,
+          "code": "LPR",
+          "classCode": "LPR",
+          "typeId": "parcel",
+          "label": "LPR",
+          "divyangjan": false
+        },
+        {
+          "seq": 23,
+          "position": 22,
+          "code": "VP",
+          "classCode": "VP",
+          "typeId": "parcel",
+          "label": "VP",
+          "divyangjan": false
+        }
+      ],
+      "coachCount": 23,
+      "compositionSource": "ntes-live-board",
+      "divyangjanPositions": [
+        1
+      ],
+      "divyangjanCoaches": [
+        {
+          "position": 1,
+          "code": "SLRD",
+          "label": "SLRD"
+        }
+      ]
+    },
+    "12738": {
+      "trainNo": "12738",
+      "trainName": "GOUTAMI SF EXP",
+      "platform": "3",
+      "from": "LINGAMPALLI",
+      "to": "KAKINADA PORT",
+      "expectedArrival": "21:59",
+      "expectedDeparture": "22:00",
+      "status": "On Time",
+      "delay": 0,
+      "runningState": "scheduled",
+      "heading": {
+        "direction": "unknown",
+        "toward": "KAKINADA PORT",
+        "from": "LINGAMPALLI",
+        "engineSide": "left"
+      },
+      "compositionAvailable": true,
+      "coaches": [
+        {
+          "seq": 1,
+          "position": 0,
+          "code": "ENG",
+          "classCode": "ENG",
+          "typeId": "engine",
+          "label": "ENG",
+          "divyangjan": false
+        },
+        {
+          "seq": 2,
+          "position": 1,
+          "code": "RA",
+          "classCode": "RA",
+          "typeId": "unknown",
+          "label": "RA",
+          "divyangjan": false
+        },
+        {
+          "seq": 3,
+          "position": 2,
+          "code": "LPR",
+          "classCode": "LPR",
+          "typeId": "parcel",
+          "label": "LPR",
+          "divyangjan": false
+        },
+        {
+          "seq": 4,
+          "position": 3,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 5,
+          "position": 4,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false
+        },
+        {
+          "seq": 6,
+          "position": 5,
+          "code": "H1",
+          "classCode": "1A",
+          "typeId": "ac1",
+          "label": "H1",
+          "divyangjan": false
+        },
+        {
+          "seq": 7,
+          "position": 6,
+          "code": "A3",
+          "classCode": "2A",
+          "typeId": "ac2",
+          "label": "A3",
+          "divyangjan": false
+        },
+        {
+          "seq": 8,
+          "position": 7,
+          "code": "A2",
+          "classCode": "2A",
+          "typeId": "ac2",
+          "label": "A2",
+          "divyangjan": false
+        },
+        {
+          "seq": 9,
+          "position": 8,
+          "code": "A1",
+          "classCode": "2A",
+          "typeId": "ac2",
+          "label": "A1",
+          "divyangjan": false
+        },
+        {
+          "seq": 10,
+          "position": 9,
+          "code": "B4",
+          "classCode": "3A",
+          "typeId": "ac3",
+          "label": "B4",
+          "divyangjan": false
+        },
+        {
+          "seq": 11,
+          "position": 10,
+          "code": "B3",
+          "classCode": "3A",
+          "typeId": "ac3",
+          "label": "B3",
+          "divyangjan": false
+        },
+        {
+          "seq": 12,
+          "position": 11,
+          "code": "B2",
+          "classCode": "3A",
+          "typeId": "ac3",
+          "label": "B2",
+          "divyangjan": false
+        },
+        {
+          "seq": 13,
+          "position": 12,
           "code": "B1",
           "classCode": "3A",
           "typeId": "ac3",
           "label": "B1",
+          "divyangjan": false
+        },
+        {
+          "seq": 14,
+          "position": 13,
+          "code": "M2",
+          "classCode": "3E",
+          "typeId": "ac3",
+          "label": "M2",
+          "divyangjan": false
+        },
+        {
+          "seq": 15,
+          "position": 14,
+          "code": "M1",
+          "classCode": "3E",
+          "typeId": "ac3",
+          "label": "M1",
+          "divyangjan": false
+        },
+        {
+          "seq": 16,
+          "position": 15,
+          "code": "S6",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S6",
+          "divyangjan": false
+        },
+        {
+          "seq": 17,
+          "position": 16,
+          "code": "S5",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S5",
+          "divyangjan": false
+        },
+        {
+          "seq": 18,
+          "position": 17,
+          "code": "S4",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S4",
+          "divyangjan": false
+        },
+        {
+          "seq": 19,
+          "position": 18,
+          "code": "S3",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S3",
+          "divyangjan": false
+        },
+        {
+          "seq": 20,
+          "position": 19,
+          "code": "S2",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S2",
+          "divyangjan": false
+        },
+        {
+          "seq": 21,
+          "position": 20,
+          "code": "S1",
+          "classCode": "SL",
+          "typeId": "sleeper",
+          "label": "S1",
+          "divyangjan": false
+        },
+        {
+          "seq": 22,
+          "position": 21,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
           "divyangjan": false
         },
         {
@@ -1003,15 +783,6 @@
         {
           "seq": 24,
           "position": 23,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 25,
-          "position": 24,
           "code": "SLRD",
           "classCode": "SLRD",
           "typeId": "slr",
@@ -1019,492 +790,39 @@
           "divyangjan": true
         }
       ],
-      "coachCount": 25,
+      "coachCount": 24,
       "compositionSource": "ntes-live-board",
       "divyangjanPositions": [
-        1,
-        24
+        23
       ],
       "divyangjanCoaches": [
         {
-          "position": 1,
-          "code": "SLRD",
-          "label": "SLRD"
-        },
-        {
-          "position": 24,
+          "position": 23,
           "code": "SLRD",
           "label": "SLRD"
         }
       ]
-    },
-    "17659": {
-      "trainNo": "17659",
-      "trainName": "SC BDCR EXP",
-      "platform": "2",
-      "from": "SECUNDERABAD JN",
-      "to": "BHADRACHALAM RD",
-      "expectedArrival": "18:04",
-      "expectedDeparture": "18:05",
-      "status": "On Time",
-      "delay": 0,
-      "runningState": "scheduled",
-      "heading": {
-        "direction": "right",
-        "toward": "BHADRACHALAM RD",
-        "from": "SECUNDERABAD JN",
-        "engineSide": "right"
-      },
-      "compositionAvailable": true,
-      "coaches": [
-        {
-          "seq": 1,
-          "position": 0,
-          "code": "ENG",
-          "classCode": "ENG",
-          "typeId": "engine",
-          "label": "ENG",
-          "divyangjan": false
-        },
-        {
-          "seq": 2,
-          "position": 1,
-          "code": "SLRD",
-          "classCode": "SLRD",
-          "typeId": "slr",
-          "label": "SLRD",
-          "divyangjan": true
-        },
-        {
-          "seq": 3,
-          "position": 2,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 4,
-          "position": 3,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 5,
-          "position": 4,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 6,
-          "position": 5,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 7,
-          "position": 6,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 8,
-          "position": 7,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 9,
-          "position": 8,
-          "code": "C1",
-          "classCode": "CC",
-          "typeId": "chair",
-          "label": "C1",
-          "divyangjan": false
-        },
-        {
-          "seq": 10,
-          "position": 9,
-          "code": "C2",
-          "classCode": "CC",
-          "typeId": "chair",
-          "label": "C2",
-          "divyangjan": false
-        },
-        {
-          "seq": 11,
-          "position": 10,
-          "code": "D1",
-          "classCode": "2S",
-          "typeId": "chair",
-          "label": "D1",
-          "divyangjan": false
-        },
-        {
-          "seq": 12,
-          "position": 11,
-          "code": "D2",
-          "classCode": "2S",
-          "typeId": "chair",
-          "label": "D2",
-          "divyangjan": false
-        },
-        {
-          "seq": 13,
-          "position": 12,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 14,
-          "position": 13,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 15,
-          "position": 14,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 16,
-          "position": 15,
-          "code": "SLRD",
-          "classCode": "SLRD",
-          "typeId": "slr",
-          "label": "SLRD",
-          "divyangjan": true
-        }
-      ],
-      "coachCount": 16,
-      "compositionSource": "ntes-live-board",
-      "divyangjanPositions": [
-        1,
-        15
-      ],
-      "divyangjanCoaches": [
-        {
-          "position": 1,
-          "code": "SLRD",
-          "label": "SLRD"
-        },
-        {
-          "position": 15,
-          "code": "SLRD",
-          "label": "SLRD"
-        }
-      ]
-    },
-    "18045": {
-      "trainNo": "18045",
-      "trainName": "EAST COAST EXP",
-      "platform": "1",
-      "from": "SHALIMAR",
-      "to": "CHARLAPALLI",
-      "expectedArrival": "17:26",
-      "expectedDeparture": "17:27",
-      "status": "Late by 102 mins",
-      "delay": 102,
-      "runningState": "scheduled",
-      "heading": {
-        "direction": "left",
-        "toward": "CHARLAPALLI",
-        "from": "SHALIMAR",
-        "engineSide": "left"
-      },
-      "compositionAvailable": true,
-      "coaches": [
-        {
-          "seq": 1,
-          "position": 0,
-          "code": "ENG",
-          "classCode": "ENG",
-          "typeId": "engine",
-          "label": "ENG",
-          "divyangjan": false
-        },
-        {
-          "seq": 2,
-          "position": 1,
-          "code": "VP",
-          "classCode": "VP",
-          "typeId": "parcel",
-          "label": "VP",
-          "divyangjan": false
-        },
-        {
-          "seq": 3,
-          "position": 2,
-          "code": "LPR",
-          "classCode": "LPR",
-          "typeId": "parcel",
-          "label": "LPR",
-          "divyangjan": false
-        },
-        {
-          "seq": 4,
-          "position": 3,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 5,
-          "position": 4,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 6,
-          "position": 5,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 7,
-          "position": 6,
-          "code": "S1",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S1",
-          "divyangjan": false
-        },
-        {
-          "seq": 8,
-          "position": 7,
-          "code": "S2",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S2",
-          "divyangjan": false
-        },
-        {
-          "seq": 9,
-          "position": 8,
-          "code": "S3",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S3",
-          "divyangjan": false
-        },
-        {
-          "seq": 10,
-          "position": 9,
-          "code": "S4",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S4",
-          "divyangjan": false
-        },
-        {
-          "seq": 11,
-          "position": 10,
-          "code": "S5",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S5",
-          "divyangjan": false
-        },
-        {
-          "seq": 12,
-          "position": 11,
-          "code": "S6",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S6",
-          "divyangjan": false
-        },
-        {
-          "seq": 13,
-          "position": 12,
-          "code": "S7",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S7",
-          "divyangjan": false
-        },
-        {
-          "seq": 14,
-          "position": 13,
-          "code": "M1",
-          "classCode": "3E",
-          "typeId": "ac3",
-          "label": "M1",
-          "divyangjan": false
-        },
-        {
-          "seq": 15,
-          "position": 14,
-          "code": "M2",
-          "classCode": "3E",
-          "typeId": "ac3",
-          "label": "M2",
-          "divyangjan": false
-        },
-        {
-          "seq": 16,
-          "position": 15,
-          "code": "BE1",
-          "classCode": "3A",
-          "typeId": "ac3",
-          "label": "BE1",
-          "divyangjan": false
-        },
-        {
-          "seq": 17,
-          "position": 16,
-          "code": "B1",
-          "classCode": "3A",
-          "typeId": "ac3",
-          "label": "B1",
-          "divyangjan": false
-        },
-        {
-          "seq": 18,
-          "position": 17,
-          "code": "B2",
-          "classCode": "3A",
-          "typeId": "ac3",
-          "label": "B2",
-          "divyangjan": false
-        },
-        {
-          "seq": 19,
-          "position": 18,
-          "code": "B3",
-          "classCode": "3A",
-          "typeId": "ac3",
-          "label": "B3",
-          "divyangjan": false
-        },
-        {
-          "seq": 20,
-          "position": 19,
-          "code": "B4",
-          "classCode": "3A",
-          "typeId": "ac3",
-          "label": "B4",
-          "divyangjan": false
-        },
-        {
-          "seq": 21,
-          "position": 20,
-          "code": "A1",
-          "classCode": "2A",
-          "typeId": "ac2",
-          "label": "A1",
-          "divyangjan": false
-        },
-        {
-          "seq": 22,
-          "position": 21,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
-          "divyangjan": false
-        },
-        {
-          "seq": 23,
-          "position": 22,
-          "code": "SLRD",
-          "classCode": "SLRD",
-          "typeId": "slr",
-          "label": "SLRD",
-          "divyangjan": true
-        }
-      ],
-      "coachCount": 23,
-      "compositionSource": "ntes-live-board",
-      "divyangjanPositions": [
-        22
-      ],
-      "divyangjanCoaches": [
-        {
-          "position": 22,
-          "code": "SLRD",
-          "label": "SLRD"
-        }
-      ]
-    },
-    "67763": {
-      "trainNo": "67763",
-      "trainName": "SC-KZJ MEMU",
-      "platform": "2",
-      "from": "SECUNDERABAD JN",
-      "to": "KAZIPET JN",
-      "expectedArrival": "19:59",
-      "expectedDeparture": "20:00",
-      "status": "On Time",
-      "delay": 0,
-      "runningState": "scheduled",
-      "heading": {
-        "direction": "right",
-        "toward": "KAZIPET JN",
-        "from": "SECUNDERABAD JN",
-        "engineSide": "right"
-      },
-      "compositionAvailable": false,
-      "coaches": [],
-      "coachCount": 0,
-      "compositionSource": null,
-      "divyangjanPositions": [],
-      "divyangjanCoaches": []
     }
   },
   "focus": {
     "platform": "1",
     "inWindow": true,
     "train": {
-      "trainNo": "18045",
-      "trainName": "EAST COAST EXP",
+      "trainNo": "12705",
+      "trainName": "SC INTERCITY SF",
       "platform": "1",
-      "from": "SHALIMAR",
-      "to": "CHARLAPALLI",
-      "expectedArrival": "17:26",
-      "expectedDeparture": "17:27",
+      "from": "GUNTUR JN",
+      "to": "SECUNDERABAD JN",
+      "expectedArrival": "21:14",
+      "expectedDeparture": "21:15",
       "minutesUntil": 0,
-      "status": "Late by 102 mins",
-      "delay": 102
+      "status": "On Time",
+      "delay": 0
     },
     "heading": {
       "direction": "left",
-      "toward": "CHARLAPALLI",
-      "from": "SHALIMAR",
+      "toward": "SECUNDERABAD JN",
+      "from": "GUNTUR JN",
       "engineSide": "left"
     },
     "compositionAvailable": true,
@@ -1517,30 +835,30 @@
         "typeId": "engine",
         "label": "ENG",
         "divyangjan": false,
-        "walkMeters": 75,
-        "walkSeconds": 115
+        "walkMeters": 156.1,
+        "walkSeconds": 240
       },
       {
         "seq": 2,
         "position": 1,
-        "code": "VP",
-        "classCode": "VP",
-        "typeId": "parcel",
-        "label": "VP",
-        "divyangjan": false,
-        "walkMeters": 50,
-        "walkSeconds": 77
-      },
-      {
-        "seq": 3,
-        "position": 2,
         "code": "LPR",
         "classCode": "LPR",
         "typeId": "parcel",
         "label": "LPR",
         "divyangjan": false,
-        "walkMeters": 25,
-        "walkSeconds": 38
+        "walkMeters": 133.8,
+        "walkSeconds": 206
+      },
+      {
+        "seq": 3,
+        "position": 2,
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
+        "divyangjan": false,
+        "walkMeters": 111.5,
+        "walkSeconds": 172
       },
       {
         "seq": 4,
@@ -1550,8 +868,8 @@
         "typeId": "general",
         "label": "GEN",
         "divyangjan": false,
-        "walkMeters": 0,
-        "walkSeconds": 0
+        "walkMeters": 89.2,
+        "walkSeconds": 137
       },
       {
         "seq": 5,
@@ -1561,96 +879,96 @@
         "typeId": "general",
         "label": "GEN",
         "divyangjan": false,
-        "walkMeters": 25,
-        "walkSeconds": 38
+        "walkMeters": 66.9,
+        "walkSeconds": 103
       },
       {
         "seq": 6,
         "position": 5,
-        "code": "GEN",
-        "classCode": "GEN",
-        "typeId": "general",
-        "label": "GEN",
+        "code": "D1",
+        "classCode": "2S",
+        "typeId": "chair",
+        "label": "D1",
         "divyangjan": false,
-        "walkMeters": 50,
-        "walkSeconds": 77
+        "walkMeters": 44.6,
+        "walkSeconds": 69
       },
       {
         "seq": 7,
         "position": 6,
-        "code": "S1",
-        "classCode": "SL",
-        "typeId": "sleeper",
-        "label": "S1",
+        "code": "D2",
+        "classCode": "2S",
+        "typeId": "chair",
+        "label": "D2",
         "divyangjan": false,
-        "walkMeters": 75,
-        "walkSeconds": 115
+        "walkMeters": 22.3,
+        "walkSeconds": 34
       },
       {
         "seq": 8,
         "position": 7,
-        "code": "S2",
-        "classCode": "SL",
-        "typeId": "sleeper",
-        "label": "S2",
+        "code": "D3",
+        "classCode": "2S",
+        "typeId": "chair",
+        "label": "D3",
         "divyangjan": false,
-        "walkMeters": 100,
-        "walkSeconds": 154
+        "walkMeters": 0,
+        "walkSeconds": 0
       },
       {
         "seq": 9,
         "position": 8,
-        "code": "S3",
-        "classCode": "SL",
-        "typeId": "sleeper",
-        "label": "S3",
+        "code": "D4",
+        "classCode": "2S",
+        "typeId": "chair",
+        "label": "D4",
         "divyangjan": false,
-        "walkMeters": 125,
-        "walkSeconds": 192
+        "walkMeters": 22.3,
+        "walkSeconds": 34
       },
       {
         "seq": 10,
         "position": 9,
-        "code": "S4",
-        "classCode": "SL",
-        "typeId": "sleeper",
-        "label": "S4",
+        "code": "D5",
+        "classCode": "2S",
+        "typeId": "chair",
+        "label": "D5",
         "divyangjan": false,
-        "walkMeters": 150,
-        "walkSeconds": 231
+        "walkMeters": 44.6,
+        "walkSeconds": 69
       },
       {
         "seq": 11,
         "position": 10,
-        "code": "S5",
-        "classCode": "SL",
-        "typeId": "sleeper",
-        "label": "S5",
+        "code": "D6",
+        "classCode": "2S",
+        "typeId": "chair",
+        "label": "D6",
         "divyangjan": false,
-        "walkMeters": 175,
-        "walkSeconds": 269
+        "walkMeters": 66.9,
+        "walkSeconds": 103
       },
       {
         "seq": 12,
         "position": 11,
-        "code": "S6",
-        "classCode": "SL",
-        "typeId": "sleeper",
-        "label": "S6",
+        "code": "D7",
+        "classCode": "2S",
+        "typeId": "chair",
+        "label": "D7",
         "divyangjan": false,
-        "walkMeters": 200,
-        "walkSeconds": 308
+        "walkMeters": 89.2,
+        "walkSeconds": 137
       },
       {
         "seq": 13,
         "position": 12,
-        "code": "S7",
-        "classCode": "SL",
-        "typeId": "sleeper",
-        "label": "S7",
+        "code": "D8",
+        "classCode": "2S",
+        "typeId": "chair",
+        "label": "D8",
         "divyangjan": false,
-        "walkMeters": 225,
-        "walkSeconds": 346
+        "walkMeters": 111.5,
+        "walkSeconds": 172
       },
       {
         "seq": 14,
@@ -1660,85 +978,85 @@
         "typeId": "ac3",
         "label": "M1",
         "divyangjan": false,
-        "walkMeters": 250,
-        "walkSeconds": 385
+        "walkMeters": 133.8,
+        "walkSeconds": 206
       },
       {
         "seq": 15,
         "position": 14,
-        "code": "M2",
-        "classCode": "3E",
-        "typeId": "ac3",
-        "label": "M2",
+        "code": "C1",
+        "classCode": "CC",
+        "typeId": "chair",
+        "label": "C1",
         "divyangjan": false,
-        "walkMeters": 275,
-        "walkSeconds": 423
+        "walkMeters": 156.1,
+        "walkSeconds": 240
       },
       {
         "seq": 16,
         "position": 15,
-        "code": "BE1",
-        "classCode": "3A",
-        "typeId": "ac3",
-        "label": "BE1",
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
         "divyangjan": false,
-        "walkMeters": 300,
-        "walkSeconds": 462
+        "walkMeters": 178.4,
+        "walkSeconds": 274
       },
       {
         "seq": 17,
         "position": 16,
-        "code": "B1",
-        "classCode": "3A",
-        "typeId": "ac3",
-        "label": "B1",
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
         "divyangjan": false,
-        "walkMeters": 325,
-        "walkSeconds": 500
+        "walkMeters": 200.70000000000002,
+        "walkSeconds": 309
       },
       {
         "seq": 18,
         "position": 17,
-        "code": "B2",
-        "classCode": "3A",
-        "typeId": "ac3",
-        "label": "B2",
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
         "divyangjan": false,
-        "walkMeters": 350,
-        "walkSeconds": 538
+        "walkMeters": 223,
+        "walkSeconds": 343
       },
       {
         "seq": 19,
         "position": 18,
-        "code": "B3",
-        "classCode": "3A",
-        "typeId": "ac3",
-        "label": "B3",
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
         "divyangjan": false,
-        "walkMeters": 375,
-        "walkSeconds": 577
+        "walkMeters": 245.3,
+        "walkSeconds": 377
       },
       {
         "seq": 20,
         "position": 19,
-        "code": "B4",
-        "classCode": "3A",
-        "typeId": "ac3",
-        "label": "B4",
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
         "divyangjan": false,
-        "walkMeters": 400,
-        "walkSeconds": 615
+        "walkMeters": 267.6,
+        "walkSeconds": 412
       },
       {
         "seq": 21,
         "position": 20,
-        "code": "A1",
-        "classCode": "2A",
-        "typeId": "ac2",
-        "label": "A1",
+        "code": "GEN",
+        "classCode": "GEN",
+        "typeId": "general",
+        "label": "GEN",
         "divyangjan": false,
-        "walkMeters": 425,
-        "walkSeconds": 654
+        "walkMeters": 289.90000000000003,
+        "walkSeconds": 446
       },
       {
         "seq": 22,
@@ -1748,8 +1066,8 @@
         "typeId": "general",
         "label": "GEN",
         "divyangjan": false,
-        "walkMeters": 450,
-        "walkSeconds": 692
+        "walkMeters": 312.2,
+        "walkSeconds": 480
       },
       {
         "seq": 23,
@@ -1759,8 +1077,8 @@
         "typeId": "slr",
         "label": "SLRD",
         "divyangjan": true,
-        "walkMeters": 475,
-        "walkSeconds": 731
+        "walkMeters": 334.5,
+        "walkSeconds": 515
       }
     ],
     "coachCount": 23,
@@ -1777,9 +1095,9 @@
     ],
     "youAreHere": {
       "enabled": true,
-      "slotIndex": 3,
-      "metersFromEngineEnd": 75,
-      "alignedCoachCode": "GEN",
+      "slotIndex": 7,
+      "metersFromEngineEnd": 167,
+      "alignedCoachCode": "D3",
       "facing": "engine_left",
       "platform": "1"
     },
@@ -1791,21 +1109,21 @@
       "platform": "1",
       "inWindow": true,
       "train": {
-        "trainNo": "18045",
-        "trainName": "EAST COAST EXP",
+        "trainNo": "12705",
+        "trainName": "SC INTERCITY SF",
         "platform": "1",
-        "from": "SHALIMAR",
-        "to": "CHARLAPALLI",
-        "expectedArrival": "17:26",
-        "expectedDeparture": "17:27",
+        "from": "GUNTUR JN",
+        "to": "SECUNDERABAD JN",
+        "expectedArrival": "21:14",
+        "expectedDeparture": "21:15",
         "minutesUntil": 0,
-        "status": "Late by 102 mins",
-        "delay": 102
+        "status": "On Time",
+        "delay": 0
       },
       "heading": {
         "direction": "left",
-        "toward": "CHARLAPALLI",
-        "from": "SHALIMAR",
+        "toward": "SECUNDERABAD JN",
+        "from": "GUNTUR JN",
         "engineSide": "left"
       },
       "compositionAvailable": true,
@@ -1818,30 +1136,30 @@
           "typeId": "engine",
           "label": "ENG",
           "divyangjan": false,
-          "walkMeters": 75,
-          "walkSeconds": 115
+          "walkMeters": 156.1,
+          "walkSeconds": 240
         },
         {
           "seq": 2,
           "position": 1,
-          "code": "VP",
-          "classCode": "VP",
-          "typeId": "parcel",
-          "label": "VP",
-          "divyangjan": false,
-          "walkMeters": 50,
-          "walkSeconds": 77
-        },
-        {
-          "seq": 3,
-          "position": 2,
           "code": "LPR",
           "classCode": "LPR",
           "typeId": "parcel",
           "label": "LPR",
           "divyangjan": false,
-          "walkMeters": 25,
-          "walkSeconds": 38
+          "walkMeters": 133.8,
+          "walkSeconds": 206
+        },
+        {
+          "seq": 3,
+          "position": 2,
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
+          "divyangjan": false,
+          "walkMeters": 111.5,
+          "walkSeconds": 172
         },
         {
           "seq": 4,
@@ -1851,8 +1169,8 @@
           "typeId": "general",
           "label": "GEN",
           "divyangjan": false,
-          "walkMeters": 0,
-          "walkSeconds": 0
+          "walkMeters": 89.2,
+          "walkSeconds": 137
         },
         {
           "seq": 5,
@@ -1862,96 +1180,96 @@
           "typeId": "general",
           "label": "GEN",
           "divyangjan": false,
-          "walkMeters": 25,
-          "walkSeconds": 38
+          "walkMeters": 66.9,
+          "walkSeconds": 103
         },
         {
           "seq": 6,
           "position": 5,
-          "code": "GEN",
-          "classCode": "GEN",
-          "typeId": "general",
-          "label": "GEN",
+          "code": "D1",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D1",
           "divyangjan": false,
-          "walkMeters": 50,
-          "walkSeconds": 77
+          "walkMeters": 44.6,
+          "walkSeconds": 69
         },
         {
           "seq": 7,
           "position": 6,
-          "code": "S1",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S1",
+          "code": "D2",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D2",
           "divyangjan": false,
-          "walkMeters": 75,
-          "walkSeconds": 115
+          "walkMeters": 22.3,
+          "walkSeconds": 34
         },
         {
           "seq": 8,
           "position": 7,
-          "code": "S2",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S2",
+          "code": "D3",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D3",
           "divyangjan": false,
-          "walkMeters": 100,
-          "walkSeconds": 154
+          "walkMeters": 0,
+          "walkSeconds": 0
         },
         {
           "seq": 9,
           "position": 8,
-          "code": "S3",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S3",
+          "code": "D4",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D4",
           "divyangjan": false,
-          "walkMeters": 125,
-          "walkSeconds": 192
+          "walkMeters": 22.3,
+          "walkSeconds": 34
         },
         {
           "seq": 10,
           "position": 9,
-          "code": "S4",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S4",
+          "code": "D5",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D5",
           "divyangjan": false,
-          "walkMeters": 150,
-          "walkSeconds": 231
+          "walkMeters": 44.6,
+          "walkSeconds": 69
         },
         {
           "seq": 11,
           "position": 10,
-          "code": "S5",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S5",
+          "code": "D6",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D6",
           "divyangjan": false,
-          "walkMeters": 175,
-          "walkSeconds": 269
+          "walkMeters": 66.9,
+          "walkSeconds": 103
         },
         {
           "seq": 12,
           "position": 11,
-          "code": "S6",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S6",
+          "code": "D7",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D7",
           "divyangjan": false,
-          "walkMeters": 200,
-          "walkSeconds": 308
+          "walkMeters": 89.2,
+          "walkSeconds": 137
         },
         {
           "seq": 13,
           "position": 12,
-          "code": "S7",
-          "classCode": "SL",
-          "typeId": "sleeper",
-          "label": "S7",
+          "code": "D8",
+          "classCode": "2S",
+          "typeId": "chair",
+          "label": "D8",
           "divyangjan": false,
-          "walkMeters": 225,
-          "walkSeconds": 346
+          "walkMeters": 111.5,
+          "walkSeconds": 172
         },
         {
           "seq": 14,
@@ -1961,85 +1279,85 @@
           "typeId": "ac3",
           "label": "M1",
           "divyangjan": false,
-          "walkMeters": 250,
-          "walkSeconds": 385
+          "walkMeters": 133.8,
+          "walkSeconds": 206
         },
         {
           "seq": 15,
           "position": 14,
-          "code": "M2",
-          "classCode": "3E",
-          "typeId": "ac3",
-          "label": "M2",
+          "code": "C1",
+          "classCode": "CC",
+          "typeId": "chair",
+          "label": "C1",
           "divyangjan": false,
-          "walkMeters": 275,
-          "walkSeconds": 423
+          "walkMeters": 156.1,
+          "walkSeconds": 240
         },
         {
           "seq": 16,
           "position": 15,
-          "code": "BE1",
-          "classCode": "3A",
-          "typeId": "ac3",
-          "label": "BE1",
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
           "divyangjan": false,
-          "walkMeters": 300,
-          "walkSeconds": 462
+          "walkMeters": 178.4,
+          "walkSeconds": 274
         },
         {
           "seq": 17,
           "position": 16,
-          "code": "B1",
-          "classCode": "3A",
-          "typeId": "ac3",
-          "label": "B1",
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
           "divyangjan": false,
-          "walkMeters": 325,
-          "walkSeconds": 500
+          "walkMeters": 200.70000000000002,
+          "walkSeconds": 309
         },
         {
           "seq": 18,
           "position": 17,
-          "code": "B2",
-          "classCode": "3A",
-          "typeId": "ac3",
-          "label": "B2",
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
           "divyangjan": false,
-          "walkMeters": 350,
-          "walkSeconds": 538
+          "walkMeters": 223,
+          "walkSeconds": 343
         },
         {
           "seq": 19,
           "position": 18,
-          "code": "B3",
-          "classCode": "3A",
-          "typeId": "ac3",
-          "label": "B3",
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
           "divyangjan": false,
-          "walkMeters": 375,
-          "walkSeconds": 577
+          "walkMeters": 245.3,
+          "walkSeconds": 377
         },
         {
           "seq": 20,
           "position": 19,
-          "code": "B4",
-          "classCode": "3A",
-          "typeId": "ac3",
-          "label": "B4",
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
           "divyangjan": false,
-          "walkMeters": 400,
-          "walkSeconds": 615
+          "walkMeters": 267.6,
+          "walkSeconds": 412
         },
         {
           "seq": 21,
           "position": 20,
-          "code": "A1",
-          "classCode": "2A",
-          "typeId": "ac2",
-          "label": "A1",
+          "code": "GEN",
+          "classCode": "GEN",
+          "typeId": "general",
+          "label": "GEN",
           "divyangjan": false,
-          "walkMeters": 425,
-          "walkSeconds": 654
+          "walkMeters": 289.90000000000003,
+          "walkSeconds": 446
         },
         {
           "seq": 22,
@@ -2049,8 +1367,8 @@
           "typeId": "general",
           "label": "GEN",
           "divyangjan": false,
-          "walkMeters": 450,
-          "walkSeconds": 692
+          "walkMeters": 312.2,
+          "walkSeconds": 480
         },
         {
           "seq": 23,
@@ -2060,8 +1378,8 @@
           "typeId": "slr",
           "label": "SLRD",
           "divyangjan": true,
-          "walkMeters": 475,
-          "walkSeconds": 731
+          "walkMeters": 334.5,
+          "walkSeconds": 515
         }
       ],
       "coachCount": 23,
@@ -2078,9 +1396,9 @@
       ],
       "youAreHere": {
         "enabled": true,
-        "slotIndex": 3,
-        "metersFromEngineEnd": 75,
-        "alignedCoachCode": "GEN",
+        "slotIndex": 7,
+        "metersFromEngineEnd": 167,
+        "alignedCoachCode": "D3",
         "facing": "engine_left",
         "platform": "1"
       },
@@ -2096,13 +1414,13 @@
       "youAreHere": {
         "enabled": true,
         "slotIndex": null,
-        "metersFromEngineEnd": 75,
+        "metersFromEngineEnd": 167,
         "alignedCoachCode": null,
         "facing": "engine_left"
       },
       "nextLabel": null
     }
   ],
-  "liveFetchedAt": "2026-08-14T11:57:32.146Z",
-  "liveTrainCount": 7
+  "liveFetchedAt": "2026-08-22T15:44:25.678Z",
+  "liveTrainCount": 3
 }

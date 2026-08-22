@@ -46,7 +46,16 @@ window.COACH_I18N = {
     divyangjanAtPos: 'Divyangjan Coach at Position: {n}',
     chartView: 'Chart view',
     tvView: 'TV view',
-    coachPosition: 'Coach Position'
+    coachPosition: 'Coach Position',
+    stationFacilities: 'Station facilities',
+    amenityToilet: 'Toilet',
+    amenityToiletAccess: 'Accessible toilet',
+    amenityFob: 'Foot over bridge',
+    amenityWater: 'Drinking water',
+    amenityWaiting: 'Waiting room',
+    amenityOffice: 'Station Master',
+    amenitySecurity: 'RPF',
+    useFobToReach: 'Use the {fob} to reach platform {n}.'
   },
   te: {
     lang: 'తె',
@@ -93,7 +102,16 @@ window.COACH_I18N = {
     divyangjanAtPos: 'దివ్యాంగుల కోచ్ స్థానం: {n}',
     chartView: 'చార్ట్ వీక్షణ',
     tvView: 'TV వీక్షణ',
-    coachPosition: 'కోచ్ స్థానం'
+    coachPosition: 'కోచ్ స్థానం',
+    stationFacilities: 'స్టేషన్ సౌకర్యాలు',
+    amenityToilet: 'మరుగుదోడ',
+    amenityToiletAccess: 'దివ్యాంగ మరుగుదోడ',
+    amenityFob: 'ఫుట్ ఓవర్ బ్రిడ్జ్',
+    amenityWater: 'తాగు నీరు',
+    amenityWaiting: 'వేచిచూసే గది',
+    amenityOffice: 'స్టేషన్ మాస్టర్',
+    amenitySecurity: 'RPF',
+    useFobToReach: 'ప్లాట్‌ఫామ్ {n}కి {fob} ఉపయోగించండి.'
   },
   hi: {
     lang: 'हि',
@@ -140,7 +158,16 @@ window.COACH_I18N = {
     divyangjanAtPos: 'दिव्यांगजन कोच स्थिति: {n}',
     chartView: 'चार्ट व्यू',
     tvView: 'TV व्यू',
-    coachPosition: 'कोच स्थिति'
+    coachPosition: 'कोच स्थिति',
+    stationFacilities: 'स्टेशन सुविधाएँ',
+    amenityToilet: 'शौचालय',
+    amenityToiletAccess: 'दिव्यांग शौचालय',
+    amenityFob: 'फुट ओवर ब्रिज',
+    amenityWater: 'पीने का पानी',
+    amenityWaiting: 'प्रतीक्षा कक्ष',
+    amenityOffice: 'स्टेशन मास्टर',
+    amenitySecurity: 'RPF',
+    useFobToReach: 'प्लेटफ़ॉर्म {n} तक पहुँचने के लिए {fob} का उपयोग करें।'
   }
 };
 

@@ -270,6 +270,7 @@ function resolveClientPin(display, platform, coaches, bogie) {
   if (!cfg || !(coaches || []).length) {
     return { enabled: false, slotIndex: null, platform: String(platform), samePlatform: false };
   }
+  const samePlatform = String(cfg.platform) === String(platform);
   const bogieM = bogie || BOGIE_DEFAULT;
   let slot =
     typeof cfg.slotIndex === 'number'
@@ -277,11 +278,11 @@ function resolveClientPin(display, platform, coaches, bogie) {
       : Math.round((Number(cfg.metersFromEngineEnd) || 0) / bogieM);
   slot = Math.max(0, Math.min(coaches.length - 1, slot));
   return {
-    enabled: true,
-    slotIndex: slot,
+    enabled: samePlatform,
+    slotIndex: samePlatform ? slot : null,
     platform: String(platform),
     configuredPlatform: String(cfg.platform || ''),
-    samePlatform: String(cfg.platform) === String(platform),
+    samePlatform,
     facing: cfg.facing || 'engine_left',
     metersFromEngineEnd: cfg.metersFromEngineEnd
   };
@@ -406,7 +407,7 @@ function resolveHeading(train, existing, layout) {
 function formatWalk(meters, seconds) {
   if (meters == null) return '';
   if (meters === 0) return t('here');
-  return `${meters}${t('meters')}`;
+  return `${Math.round(meters)}${t('meters')}`;
 }
 
 function formatWalkTime(meters, seconds) {
@@ -452,30 +453,259 @@ function coachTile(coach, pinSlot) {
     </div>`;
 }
 
-function walkStripHtml(coaches, pinEnabled) {
+function walkStripHtml(coaches, pinEnabled, pinDisplayIndex) {
   if (!pinEnabled || !coaches.length) return '';
-  const cells = coaches.map((c) => {
+  const cells = coaches.map((c, i) => {
     const dist = formatWalk(c.walkMeters, c.walkSeconds);
     const time = formatWalkTime(c.walkMeters, c.walkSeconds);
     const here = c.walkMeters === 0;
+    let sideClass = '';
+    if (!here && pinDisplayIndex != null) {
+      if (i < pinDisplayIndex) sideClass = ' walk-side-left';
+      else if (i > pinDisplayIndex) sideClass = ' walk-side-right';
+    }
     return `
-      <div class="walk-cell${here ? ' is-here' : ''}">
-        <span class="walk-dist">${esc(dist)}</span>
-        ${time ? `<span class="walk-time">${esc(time)}</span>` : ''}
+      <div class="walk-cell${here ? ' is-here' : ''}${sideClass}">
+        <span class="walk-labels">
+          <span class="walk-dist">${esc(dist)}</span>
+          ${time ? `<span class="walk-time">${esc(time)}</span>` : ''}
+        </span>
       </div>`;
   }).join('');
   return `<div class="walk-strip" aria-label="Walk distance">${cells}</div>`;
 }
 
-function platformHtml(youAreHere, coaches, engineOnRight) {
+const AMENITY_ICON = {
+  passenger: 'toilet.svg',
+  accessibility: 'toilet-access.svg',
+  waiting: 'waiting.svg',
+  admin: 'office.svg',
+  utility: 'water.svg',
+  circulation: 'fob.svg',
+  security: 'security.svg'
+};
+
+/** Layout amenity id → 3D building sprite (split from Platform_Ameneties_Icons.png). */
+const AMENITY_BUILDING_IMG = {
+  toilet: 'toilet-building.png',
+  'toilet-pf2': 'toilet-building.png',
+  'drinking-water': 'water-building.png',
+  rpf: 'rpf-building.png',
+  'station-master': 'station-master-building.png',
+  'upper-class-waiting': 'waiting-room-building.png'
+};
+
+const AMENITY_I18N = {
+  toilet: 'amenityToilet',
+  'toilet-divyang': 'amenityToiletAccess',
+  'toilet-pf2': 'amenityToilet',
+  'upper-class-waiting': 'amenityWaiting',
+  'station-master': 'amenityOffice',
+  'drinking-water': 'amenityWater',
+  'fob-pf1': 'amenityFob',
+  'fob-pf2': 'amenityFob',
+  rpf: 'amenitySecurity'
+};
+
+function platformMarkerSpan(layout, platformId) {
+  const pf = (layout?.platforms || []).find((p) => String(p.id) === String(platformId));
+  if (!pf) return { sec: 1, kaz: 26 };
+  return {
+    sec: pf.secunderabadMarker ?? 1,
+    kaz: pf.kazipetMarker ?? 26
+  };
+}
+
+function amenityMarkerMid(amenity) {
+  const from = amenity.markerFrom;
+  const to = amenity.markerTo ?? from;
+  if (from == null && to == null) return null;
+  if (from == null) return Number(to);
+  if (to == null) return Number(from);
+  return (Number(from) + Number(to)) / 2;
+}
+
+function markerToLeftPct(marker, sec, kaz) {
+  if (marker == null || Number.isNaN(marker)) return null;
+  const span = Math.abs(kaz - sec);
+  if (!span) return 50;
+  if (sec < kaz) return ((marker - sec) / span) * 100;
+  return ((sec - marker) / span) * 100;
+}
+
+function pinPlatformMarker(layout, displayId) {
+  const mount = (layout?.amenities || []).find(
+    (a) => a.displayId === displayId || a.id === 'display-tv'
+  );
+  const mid = mount ? amenityMarkerMid(mount) : null;
+  return mid != null ? mid : 8.5;
+}
+
+function amenityMarkerForRake(amenity, engineOnRight) {
+  if (amenity.category === 'circulation') {
+    if (engineOnRight && amenity.markerFrom != null) return Number(amenity.markerFrom);
+    if (!engineOnRight && amenity.markerTo != null) return Number(amenity.markerTo);
+  }
+  return amenityMarkerMid(amenity);
+}
+
+/** Map survey marker to % along the coach rake (aligned with pin + engine side). */
+function amenityPctOnRake(markerMid, layout, platformId, coachCount, engineOnRight, youAreHere) {
+  const pinMarker = pinPlatformMarker(layout, displayId());
+  const pinSlot = youAreHere.slotIndex;
+  const engineM = engineOnRight ? pinMarker + pinSlot : pinMarker - pinSlot;
+  let compSlot = engineOnRight ? engineM - markerMid : markerMid - engineM;
+  compSlot = Math.round(compSlot);
+  compSlot = Math.max(0, Math.min(coachCount - 1, compSlot));
+  const displaySlot = engineOnRight ? coachCount - 1 - compSlot : compSlot;
+  return ((displaySlot + 0.5) / coachCount) * 100;
+}
+
+function amenityPositionPct(markerMid, layout, platformId, coachCount, engineOnRight, youAreHere, pinAligned, amenity) {
+  const marker = amenity && pinAligned ? amenityMarkerForRake(amenity, engineOnRight) : markerMid;
+  if (pinAligned && coachCount > 0 && youAreHere?.slotIndex != null) {
+    return amenityPctOnRake(marker, layout, platformId, coachCount, engineOnRight, youAreHere);
+  }
+  const { sec, kaz } = platformMarkerSpan(layout, platformId);
+  return markerToLeftPct(markerMid, sec, kaz);
+}
+
+function amenityLabel(amenity) {
+  const key = AMENITY_I18N[amenity.id];
+  if (key && t(key)) return t(key);
+  return amenity.label || amenity.id || '';
+}
+
+function amenityIconSrc(amenity) {
+  const building = AMENITY_BUILDING_IMG[amenity.id];
+  if (building) return `/img/amenities/${building}`;
+  const file = AMENITY_ICON[amenity.category] || 'facility.svg';
+  return `/img/amenities/${file}`;
+}
+
+function amenitiesForPlatform(layout, platformId) {
+  if (!layout?.amenities?.length) return [];
+  return layout.amenities.filter((a) => {
+    if (String(a.platform) !== String(platformId)) return false;
+    if (a.category === 'display' || a.id === 'display-tv') return false;
+    if (a.id === 'toilet-divyang') return false;
+    if (a.category === 'circulation') return false;
+    return amenityMarkerMid(a) != null;
+  });
+}
+
+function platformHasFob(layout, platformId) {
+  return (layout?.amenities || []).some(
+    (a) => a.category === 'circulation' && String(a.platform) === String(platformId)
+  );
+}
+
+function fobAmenity(layout, platformId) {
+  return (layout?.amenities || []).find(
+    (a) => a.category === 'circulation' && String(a.platform) === String(platformId)
+  );
+}
+
+function fobWalkMeters(layout, platformId) {
+  const fob = fobAmenity(layout, platformId);
+  return Number(fob?.walkMetersFromDisplayPin) > 0
+    ? Number(fob.walkMetersFromDisplayPin)
+    : 178;
+}
+
+function fobAnchorPct(youAreHere, coachCount, engineOnRight, bogie, walkMeters) {
+  const bogieM = bogie || BOGIE_DEFAULT;
+  let pinSlot = youAreHere?.slotIndex;
+  if (pinSlot == null && typeof youAreHere?.metersFromEngineEnd === 'number') {
+    pinSlot = Math.round(youAreHere.metersFromEngineEnd / bogieM);
+  }
+  if (pinSlot == null) pinSlot = 7;
+  if (!coachCount) return 50;
+  const offset = Math.round(walkMeters / bogieM);
+  let targetSlot = pinSlot + offset;
+  targetSlot = Math.max(0, Math.min(coachCount - 1, targetSlot));
+  const displaySlot = engineOnRight ? coachCount - 1 - targetSlot : targetSlot;
+  return ((displaySlot + 0.5) / coachCount) * 100;
+}
+
+function fobBridgeOverlayHtml(platformId, layout, youAreHere, coachCount, engineOnRight, bogie) {
+  if (!platformHasFob(layout, platformId)) return '';
+  const label = t('amenityFob');
+  const walkM = fobWalkMeters(layout, platformId);
+  let anchor;
+  if (coachCount && (youAreHere?.slotIndex != null || youAreHere?.metersFromEngineEnd != null)) {
+    anchor = fobAnchorPct(youAreHere, coachCount, engineOnRight, bogie, walkM);
+  } else {
+    const fob = fobAmenity(layout, platformId);
+    const mid = amenityMarkerMid(fob);
+    const { sec, kaz } = platformMarkerSpan(layout, platformId);
+    anchor = markerToLeftPct(mid, sec, kaz) ?? 50;
+  }
+  return `
+    <div class="fob-bridge-overlay" style="--fob-anchor:${anchor.toFixed(2)}%" role="img" aria-label="${esc(label)}">
+      <img class="fob-bridge-art" src="/img/amenities/fob-transparent.png" alt="" draggable="false">
+    </div>`;
+}
+
+function amenitiesStripHtml(platformId, layout, youAreHere, coachCount, engineOnRight, pinAligned) {
+  const items = amenitiesForPlatform(layout, platformId);
+  if (!items.length) return '';
+  const tvPlatform = youAreHere?.configuredPlatform || youAreHere?.platform || '1';
+  const layer = String(platformId) === String(tvPlatform) ? 'building' : 'track';
+  const stackBuckets = new Map();
+  const pins = items
+    .map((a) => {
+      const mid = amenityMarkerMid(a);
+      const pct = amenityPositionPct(
+        mid,
+        layout,
+        platformId,
+        coachCount,
+        engineOnRight,
+        youAreHere,
+        pinAligned,
+        a
+      );
+      if (pct == null) return '';
+      const bucket = Math.round(pct / 3);
+      const stack = stackBuckets.get(bucket) || 0;
+      stackBuckets.set(bucket, stack + 1);
+      const stackClass = stack > 0 ? ` amenity-stack-${Math.min(stack, 2)}` : '';
+      const label = amenityLabel(a);
+      return `
+        <div class="amenity-pin${stackClass}" style="left:${pct}%" title="${esc(label)}">
+          <img class="amenity-icon" src="${esc(amenityIconSrc(a))}" alt="" draggable="false">
+        </div>`;
+    })
+    .join('');
+  return `
+    <div class="amenity-strip amenity-${layer}" aria-label="${esc(t('stationFacilities'))}">
+      <div class="amenity-axis" aria-hidden="true"></div>
+      ${pins}
+    </div>`;
+}
+
+function crossPlatformNoteHtml(youAreHere, trainPlatform, layout) {
+  if (!youAreHere || youAreHere.samePlatform !== false) return '';
+  const fob = (layout?.amenities || []).find(
+    (a) => a.category === 'circulation' && String(a.platform) === String(trainPlatform)
+  );
+  const fobName = fob ? amenityLabel(fob) : t('amenityFob');
+  const line1 = t('trainOnPlatform').replace('{n}', esc(String(trainPlatform)));
+  const line2 = t('useFobToReach').replace('{fob}', esc(fobName)).replace('{n}', esc(String(trainPlatform)));
+  return `<p class="pin-note pin-note-cross">${line1}<br>${line2}</p>`;
+}
+
+function platformHtml(youAreHere, coaches, engineOnRight, platformId, layout) {
   const count = coaches.length;
   const pinEnabled = Boolean(youAreHere?.enabled && youAreHere.slotIndex != null && count);
+  let pinDisplayIndex = null;
   let pin = '';
   if (pinEnabled) {
-    const displaySlot = engineOnRight
+    pinDisplayIndex = engineOnRight
       ? count - 1 - youAreHere.slotIndex
       : youAreHere.slotIndex;
-    const pct = ((displaySlot + 0.5) / count) * 100;
+    const pct = ((pinDisplayIndex + 0.5) / count) * 100;
     pin = `
       <div class="you-pin" style="left:${pct}%">
         <img class="traveler" src="/img/you-are-here.png" alt="" draggable="false">
@@ -486,6 +716,19 @@ function platformHtml(youAreHere, coaches, engineOnRight) {
   }
 
   const ticks = coaches.map(() => '<span class="bay-tick"></span>').join('');
+  const tvPlatform = youAreHere?.configuredPlatform || youAreHere?.platform || '1';
+  const amenitiesOnBuilding = String(platformId) === String(tvPlatform);
+  const pinAligned = pinEnabled && amenitiesOnBuilding;
+  const amenitiesHtml = amenitiesStripHtml(
+    platformId,
+    layout,
+    youAreHere,
+    count,
+    engineOnRight,
+    pinAligned
+  );
+  const trackAmenities = amenitiesOnBuilding ? '' : amenitiesHtml;
+  const buildingAmenities = amenitiesOnBuilding ? amenitiesHtml : '';
 
   return `
     <div class="platform" style="--coach-count:${count}">
@@ -493,9 +736,11 @@ function platformHtml(youAreHere, coaches, engineOnRight) {
       <div class="platform-deck">
         <div class="platform-grain" aria-hidden="true"></div>
         <div class="yellow-line" aria-hidden="true"></div>
+        ${trackAmenities}
         <div class="bay-ticks" aria-hidden="true">${ticks}</div>
-        ${walkStripHtml(coaches, pinEnabled)}
-        <div class="pin-row">${pin}</div>
+        ${walkStripHtml(coaches, pinEnabled, pinDisplayIndex)}
+        <div class="pin-row${pinEnabled ? '' : ' pin-row-empty'}">${pin}</div>
+        ${buildingAmenities}
       </div>
     </div>`;
 }
@@ -663,10 +908,7 @@ function renderFocus(p, bogie, shouldArrive) {
   const arriveClass = shouldArrive ? 'is-arriving' : '';
   const rakeClass = `rake ${engineOnRight ? 'engine-right' : 'engine-left'} ${arriveClass}`.trim();
   const count = p.coaches.length;
-  const pinNote =
-    p.youAreHere?.enabled && p.youAreHere.samePlatform === false
-      ? `<p class="pin-note">${t('trainOnPlatform').replace('{n}', esc(p.platform))}</p>`
-      : '';
+  const pinNote = crossPlatformNoteHtml(p.youAreHere, p.platform, stationLayout);
 
   return `
     <section class="focus-panel">
@@ -683,7 +925,8 @@ function renderFocus(p, bogie, shouldArrive) {
             <div class="rail rail-near"></div>
             <div class="rail-glow"></div>
           </div>
-          ${platformHtml(p.youAreHere, coaches, engineOnRight)}
+          ${platformHtml(p.youAreHere, coaches, engineOnRight, p.platform, stationLayout)}
+          ${fobBridgeOverlayHtml(p.platform, stationLayout, p.youAreHere, count, engineOnRight, bogie)}
         </div>
         ${pinNote}
       </div>

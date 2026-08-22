@@ -192,9 +192,44 @@ body.theme-chart .platform-grain,
 body.theme-chart .yellow-line,
 body.theme-chart .bay-ticks { display: none; }
 
+body.theme-chart .amenity-strip {
+  margin-top: 0.15rem;
+}
+
+body.theme-chart .amenity-axis {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+body.theme-chart .amenity-label {
+  color: #374151;
+}
+
+body.theme-chart .amenity-access-badge {
+  background: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+body.theme-chart .fob-bridge-art {
+  opacity: 0.31;
+}
+
 body.theme-chart .walk-cell { border-left-color: rgba(148, 163, 184, 0.25); }
 body.theme-chart .walk-cell .walk-dist { color: #111827; }
 body.theme-chart .walk-cell .walk-time { color: #1d4ed8; }
+body.theme-chart .walk-cell.walk-side-left .walk-labels,
+body.theme-chart .walk-cell.walk-side-right .walk-labels {
+  transform-origin: center center;
+}
+
+body.theme-chart .amenity-strip.amenity-building {
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+  height: clamp(3.8rem, 8vh, 5.2rem);
+}
+
+body.theme-chart .amenity-icon {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+}
 body.theme-chart .walk-cell.is-here .walk-dist { color: #b45309; }
 
 body.theme-chart .pin-cluster {
