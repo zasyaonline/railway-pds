@@ -1,0 +1,17 @@
+---
+description: Freeze premium walk labels on the platform side of the yellow line
+globs: coach-position/public/css/premium.css,coach-position/public/js/app.js,coach-position/public/premium.html
+alwaysApply: false
+---
+
+# Premium TV — frozen wayfinding rule
+
+On `premium.html` / `theme-premium`:
+
+**Walk distance and walk time must stay on the platform side of the yellow safety line.**
+
+- Never let those labels cross above the yellow line into the track/coach zone.
+- Keep ±90° / ±270° rotation if already used, but clip them inside `.walk-strip` below the yellow line.
+- Do not change this layout unless the user **explicitly** asks to move walk labels relative to the yellow line.
+
+Related CSS is marked `FROZEN (premium)` in `coach-position/public/css/premium.css`.
