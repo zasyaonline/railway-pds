@@ -806,13 +806,14 @@ body {
 .fob-bridge-overlay {
   position: absolute;
   left: var(--fob-anchor, 70%);
-  bottom: 14%;
-  /* Bottom of first step (left edge of art) sits on the 178 m column. */
+  /* Keep FOB near the track/upper deck so walk labels stay readable. */
+  top: 40%;
+  bottom: auto;
   --fob-stair-start: 4.8%;
   transform: translateX(calc(-1 * var(--fob-stair-start)));
-  width: min(22%, 250px);
-  height: min(23%, 130px);
-  z-index: 15;
+  width: min(16%, 190px);
+  height: min(18%, 110px);
+  z-index: 6;
   pointer-events: none;
   display: flex;
   align-items: flex-end;
@@ -830,7 +831,7 @@ body {
 
 .walk-strip {
   position: relative;
-  z-index: 2;
+  z-index: 14;
   display: flex;
   width: 100%;
   gap: var(--coach-gap, 1px);

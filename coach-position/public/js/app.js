@@ -591,13 +591,15 @@ function amenityIconSrc(amenity) {
 
 function amenitiesForPlatform(layout, platformId) {
   if (!layout?.amenities?.length) return [];
-  return layout.amenities.filter((a) => {
-    if (String(a.platform) !== String(platformId)) return false;
-    if (a.category === 'display' || a.id === 'display-tv') return false;
-    if (a.id === 'toilet-divyang') return false;
-    if (a.category === 'circulation') return false;
-    return amenityMarkerMid(a) != null;
-  });
+  return layout.amenities
+    .filter((a) => {
+      if (String(a.platform) !== String(platformId)) return false;
+      if (a.category === 'display' || a.id === 'display-tv') return false;
+      if (a.id === 'toilet-divyang') return false;
+      if (a.category === 'circulation') return false;
+      return amenityMarkerMid(a) != null;
+    })
+    .sort((a, b) => amenityMarkerMid(a) - amenityMarkerMid(b));
 }
 
 function toiletHasAccessibility(layout, platformId, toiletItem) {
@@ -808,17 +810,7 @@ function platformHtml(youAreHere, coaches, engineOnRight, platformId, layout, wa
       ? count - 1 - walkPinSlot
       : walkPinSlot;
     const pct = ((pinDisplayIndex + 0.5) / count) * 100;
-    pin =
-      THEME === 'premium'
-        ? `
-      <div class="you-pin" style="left:${pct}%">
-        <div class="pin-cluster">
-          <span class="label">${t('youAreHere')}</span>
-        </div>
-        <span class="arrow" aria-hidden="true">▼</span>
-        <img class="traveler" src="/img/you-are-here.png" alt="" draggable="false">
-      </div>`
-        : `
+    pin = `
       <div class="you-pin" style="left:${pct}%">
         <img class="traveler" src="/img/you-are-here.png" alt="" draggable="false">
         <div class="pin-cluster">
