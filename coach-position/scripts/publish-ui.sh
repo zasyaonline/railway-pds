@@ -17,6 +17,6 @@ aws s3 sync "$ROOT/public/" "s3://${BUCKET}/" --region "$REGION" \
   --exclude "data/*"
 aws s3 cp "$ROOT/data/stations.json" "s3://${BUCKET}/data/stations.json" --region "$REGION"
 aws cloudfront create-invalidation --distribution-id "$DIST" \
-  --paths "/js/*" "/css/*" "/index.html" "/chart.html" "/admin.html" "/config.js" "/img/*" "/data/stations.json" \
+  --paths "/js/*" "/css/*" "/index.html" "/chart.html" "/premium.html" "/admin.html" "/config.js" "/img/*" "/data/stations.json" \
   --query 'Invalidation.Id' --output text
 echo "Published UI to s3://${BUCKET}/"

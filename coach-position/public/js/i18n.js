@@ -56,7 +56,11 @@ window.COACH_I18N = {
     amenityOffice: 'Station Master',
     amenitySecurity: 'RPF',
     useFobToReach: 'Use the {fob} to reach platform {n}.',
-    useFobToReachWithWalk: 'Walk {dist} ({time}) to the {fob} shown, then cross to platform {n}.'
+    useFobToReachWithWalk: 'Walk {dist} ({time}) to the {fob} shown, then cross to platform {n}.',
+    wayfindWalkSummary: 'Walk {dist} · {time}',
+    wayfindFobDetail: 'Walk to the highlighted {fob}, then cross to platform {n}.',
+    premiumView: 'Premium TV',
+    currentTvView: 'Current TV'
   },
   te: {
     lang: 'తె',
@@ -113,7 +117,11 @@ window.COACH_I18N = {
     amenityOffice: 'స్టేషన్ మాస్టర్',
     amenitySecurity: 'RPF',
     useFobToReach: 'ప్లాట్‌ఫామ్ {n}కి {fob} ఉపయోగించండి.',
-    useFobToReachWithWalk: 'చిత్రంలో కనిపించే {fob} వరకు {dist} ({time}) నడవండి, ఆపై ప్లాట్‌ఫామ్ {n}కి చేరుకోండి.'
+    useFobToReachWithWalk: 'చిత్రంలో కనిపించే {fob} వరకు {dist} ({time}) నడవండి, ఆపై ప్లాట్‌ఫామ్ {n}కి చేరుకోండి.',
+    wayfindWalkSummary: '{dist} · {time} నడవండి',
+    wayfindFobDetail: 'హైలైట్ చేసిన {fob} వరకు నడవి, ప్లాట్‌ఫామ్ {n}కి చేరుకోండి.',
+    premiumView: 'ప్రీమియం TV',
+    currentTvView: 'ప్రస్తుత TV'
   },
   hi: {
     lang: 'हि',
@@ -170,7 +178,11 @@ window.COACH_I18N = {
     amenityOffice: 'स्टेशन मास्टर',
     amenitySecurity: 'RPF',
     useFobToReach: 'प्लेटफ़ॉर्म {n} तक पहुँचने के लिए {fob} का उपयोग करें।',
-    useFobToReachWithWalk: 'चित्र में दिखाए {fob} तक {dist} ({time}) चलें, फिर प्लेटफ़ॉर्म {n} पर पहुँचें।'
+    useFobToReachWithWalk: 'चित्र में दिखाए {fob} तक {dist} ({time}) चलें, फिर प्लेटफ़ॉर्म {n} पर पहुँचें।',
+    wayfindWalkSummary: '{dist} · {time} चलें',
+    wayfindFobDetail: 'हाइलाइट किए गए {fob} तक चलें, फिर प्लेटफ़ॉर्म {n} पर पहुँचें।',
+    premiumView: 'प्रीमियम TV',
+    currentTvView: 'वर्तमान TV'
   }
 };
 

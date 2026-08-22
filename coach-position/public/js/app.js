@@ -61,9 +61,15 @@ function applyDisplay(payload, displaysDoc) {
   return payload;
 }
 const THEME = String(
-  qs('theme') || (document.body.classList.contains('theme-chart') ? 'chart' : 'tv')
+  qs('theme') ||
+    (document.body.classList.contains('theme-premium')
+      ? 'premium'
+      : document.body.classList.contains('theme-chart')
+        ? 'chart'
+        : 'tv')
 ).toLowerCase();
 if (THEME === 'chart') document.body.classList.add('theme-chart');
+if (THEME === 'premium') document.body.classList.add('theme-premium');
 
 function applyViewportMode() {
   const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
@@ -594,6 +600,19 @@ function amenitiesForPlatform(layout, platformId) {
   });
 }
 
+function toiletHasAccessibility(layout, platformId, toiletItem) {
+  const divyang = (layout?.amenities || []).find(
+    (a) =>
+      (a.id === 'toilet-divyang' || a.category === 'accessibility') &&
+      String(a.platform) === String(platformId)
+  );
+  if (!divyang || !toiletItem) return false;
+  const tMid = amenityMarkerMid(toiletItem);
+  const dMid = amenityMarkerMid(divyang);
+  if (tMid == null || dMid == null) return false;
+  return Math.abs(tMid - dMid) < 2.5;
+}
+
 function displaySidePlatform(youAreHere) {
   return String(youAreHere?.configuredPlatform || '1');
 }
@@ -725,9 +744,18 @@ function amenitiesStripHtml(platformId, layout, youAreHere, coachCount, engineOn
       stackBuckets.set(bucket, stack + 1);
       const stackClass = stack > 0 ? ` amenity-stack-${Math.min(stack, 2)}` : '';
       const label = amenityLabel(a);
+      const accessBadge =
+        THEME === 'premium' &&
+        (a.id === 'toilet' || a.id === 'toilet-pf2' || a.category === 'passenger') &&
+        toiletHasAccessibility(layout, platformId, a)
+          ? `<span class="amenity-access-badge" title="${esc(t('amenityToiletAccess'))}">♿</span>`
+          : '';
+      const iconBlock = accessBadge
+        ? `<span class="amenity-icon-wrap"><img class="amenity-icon" src="${esc(amenityIconSrc(a))}" alt="" draggable="false">${accessBadge}</span>`
+        : `<img class="amenity-icon" src="${esc(amenityIconSrc(a))}" alt="" draggable="false">`;
       return `
         <div class="amenity-pin${stackClass}" style="left:${pct}%" title="${esc(label)}">
-          <img class="amenity-icon" src="${esc(amenityIconSrc(a))}" alt="" draggable="false">
+          ${iconBlock}
           <span class="amenity-label">${esc(label)}</span>
         </div>`;
     })
@@ -745,6 +773,22 @@ function crossPlatformNoteHtml(youAreHere, trainPlatform, layout) {
   const fobName = amenityLabel(ctx.entry);
   const dist = `${Math.round(ctx.walkMeters)}${t('meters')}`;
   const time = formatWalkTime(ctx.walkMeters, ctx.walkSeconds);
+  if (THEME === 'premium') {
+    const walkLine = t('wayfindWalkSummary')
+      .replace('{dist}', esc(dist))
+      .replace('{time}', esc(time));
+    const detail = t('wayfindFobDetail')
+      .replace('{fob}', esc(fobName))
+      .replace('{n}', esc(String(trainPlatform)));
+    return `
+      <aside class="wayfind-panel" role="status">
+        <div class="wayfind-pf"><small>${esc(t('platform'))}</small>${esc(String(trainPlatform))}</div>
+        <div class="wayfind-copy">
+          <div class="wayfind-walk">${walkLine}</div>
+          <div class="wayfind-detail">${detail}</div>
+        </div>
+      </aside>`;
+  }
   const line1 = t('trainOnPlatform').replace('{n}', esc(String(trainPlatform)));
   const line2 = t('useFobToReachWithWalk')
     .replace('{fob}', esc(fobName))
@@ -764,7 +808,17 @@ function platformHtml(youAreHere, coaches, engineOnRight, platformId, layout, wa
       ? count - 1 - walkPinSlot
       : walkPinSlot;
     const pct = ((pinDisplayIndex + 0.5) / count) * 100;
-    pin = `
+    pin =
+      THEME === 'premium'
+        ? `
+      <div class="you-pin" style="left:${pct}%">
+        <div class="pin-cluster">
+          <span class="label">${t('youAreHere')}</span>
+        </div>
+        <span class="arrow" aria-hidden="true">▼</span>
+        <img class="traveler" src="/img/you-are-here.png" alt="" draggable="false">
+      </div>`
+        : `
       <div class="you-pin" style="left:${pct}%">
         <img class="traveler" src="/img/you-are-here.png" alt="" draggable="false">
         <div class="pin-cluster">
@@ -1011,6 +1065,8 @@ function render(payload) {
   const title = locStation(payload.stationName || payload.stationCode || 'Station');
   if (THEME === 'chart') {
     $('stationTitle').textContent = `${t('coachPosition')} | ${String(payload.stationCode || title).toUpperCase()}`;
+  } else if (THEME === 'premium') {
+    $('stationTitle').textContent = String(payload.stationCode || title).toUpperCase();
   } else {
     $('stationTitle').textContent = String(title).toUpperCase();
   }
@@ -1023,12 +1079,15 @@ function render(payload) {
   if (adminLink) adminLink.textContent = t('admin');
   const themeLink = $('themeLink');
   if (themeLink) {
-    if (THEME === 'chart') {
+    if (THEME === 'premium') {
+      themeLink.href = `/?${displayQuery()}`;
+      themeLink.textContent = t('currentTvView');
+    } else if (THEME === 'chart') {
       themeLink.href = `/?${displayQuery()}`;
       themeLink.textContent = t('tvView');
     } else {
-      themeLink.href = `/chart.html?${displayQuery()}`;
-      themeLink.textContent = t('chartView');
+      themeLink.href = `/premium.html?${displayQuery()}`;
+      themeLink.textContent = t('premiumView');
     }
   }
 
