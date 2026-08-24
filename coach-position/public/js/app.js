@@ -697,24 +697,44 @@ function fobAnchorPct(youAreHere, coachCount, engineOnRight, bogie, walkMeters) 
   return ((displaySlot + 0.5) / coachCount) * 100;
 }
 
-function fobBridgeOverlayHtml(trainPlatform, layout, youAreHere, coachCount, engineOnRight, bogie) {
+function fobBridgeOverlayHtml(
+  trainPlatform,
+  layout,
+  youAreHere,
+  coachCount,
+  engineOnRight,
+  bogie,
+  pinAligned,
+  layoutPin
+) {
   if (!shouldShowFobOverlay(trainPlatform, layout, youAreHere)) return '';
   const label = t('amenityFob');
   const tvPf = displaySidePlatform(youAreHere);
-  const walkM = fobWalkMeters(layout, tvPf);
+  const fob = fobOnDisplaySide(layout, tvPf);
+  const crossPlatform = crossPlatformFobContext(youAreHere, trainPlatform, layout) != null;
   let anchor;
-  const pinForAnchor = {
-    slotIndex: displayPinSlot(youAreHere, bogie),
-    metersFromEngineEnd: youAreHere?.metersFromEngineEnd
-  };
-  if (coachCount && (pinForAnchor.slotIndex != null || pinForAnchor.metersFromEngineEnd != null)) {
-    anchor = fobAnchorPct(pinForAnchor, coachCount, engineOnRight, bogie, walkM);
+
+  /* Cross-platform: FOB stays at the fixed PF1 survey marker (same as other PF1 amenities). */
+  if (crossPlatform && pinAligned && layoutPin?.slotIndex != null && fob && coachCount) {
+    const marker = amenityMarkerForRake(fob, engineOnRight);
+    anchor = amenityPctOnRake(marker, layout, tvPf, coachCount, engineOnRight, layoutPin);
   } else {
-    const fob = fobOnDisplaySide(layout, tvPf);
-    const mid = amenityMarkerMid(fob);
-    const { sec, kaz } = platformMarkerSpan(layout, tvPf);
-    anchor = markerToLeftPct(mid, sec, kaz) ?? 50;
+    const walkM = fobWalkMeters(layout, tvPf);
+    const pinForAnchor = {
+      slotIndex: displayPinSlot(youAreHere, bogie),
+      metersFromEngineEnd: youAreHere?.metersFromEngineEnd
+    };
+    if (coachCount && (pinForAnchor.slotIndex != null || pinForAnchor.metersFromEngineEnd != null)) {
+      anchor = fobAnchorPct(pinForAnchor, coachCount, engineOnRight, bogie, walkM);
+    } else if (fob) {
+      const mid = amenityMarkerMid(fob);
+      const { sec, kaz } = platformMarkerSpan(layout, tvPf);
+      anchor = markerToLeftPct(mid, sec, kaz) ?? 50;
+    } else {
+      anchor = 50;
+    }
   }
+
   return `
     <div class="fob-bridge-overlay" style="--fob-anchor:${anchor.toFixed(2)}%" role="img" aria-label="${esc(label)}">
       <img class="fob-bridge-art" src="/img/amenities/fob-transparent.png" alt="" draggable="false">
@@ -724,7 +744,7 @@ function fobBridgeOverlayHtml(trainPlatform, layout, youAreHere, coachCount, eng
 function amenitiesStripHtml(platformId, layout, youAreHere, coachCount, engineOnRight, pinAligned) {
   const items = amenitiesForPlatform(layout, platformId);
   if (!items.length) return '';
-  const tvPlatform = youAreHere?.configuredPlatform || youAreHere?.platform || '1';
+  const tvPlatform = displaySidePlatform(youAreHere);
   const layer = String(platformId) === String(tvPlatform) ? 'building' : 'track';
   const stackBuckets = new Map();
   const pins = items
@@ -820,11 +840,16 @@ function platformHtml(youAreHere, coaches, engineOnRight, platformId, layout, wa
   }
 
   const ticks = coaches.map(() => '<span class="bay-tick"></span>').join('');
-  const tvPlatform = youAreHere?.configuredPlatform || youAreHere?.platform || '1';
+  const tvPlatform = displaySidePlatform(youAreHere);
   const amenitiesOnBuilding = String(platformId) === String(tvPlatform);
   const pinAligned = pinEnabled && amenitiesOnBuilding;
   const layoutPin = walkPinSlot != null
-    ? { ...youAreHere, slotIndex: walkPinSlot, enabled: true, configuredPlatform: tvPlatform }
+    ? {
+        ...youAreHere,
+        slotIndex: walkPinSlot,
+        enabled: true,
+        configuredPlatform: tvPlatform
+      }
     : youAreHere;
   const amenitiesHtml = amenitiesStripHtml(
     platformId,
@@ -842,7 +867,9 @@ function platformHtml(youAreHere, coaches, engineOnRight, platformId, layout, wa
     youAreHere,
     count,
     engineOnRight,
-    bogie
+    bogie,
+    pinAligned,
+    layoutPin
   );
 
   return `
@@ -1019,17 +1046,29 @@ function renderFocus(p, bogie, shouldArrive) {
     return `<section class="focus-panel">${header}<div class="unavailable">${t('unavailable')}</div></section>`;
   }
 
-  const pinSlot = p.youAreHere?.enabled ? p.youAreHere.slotIndex : null;
   const fobCtx = crossPlatformFobContext(p.youAreHere, p.platform, stationLayout);
+  const tvPlatform = fobCtx ? fobCtx.tvPlatform : displaySidePlatform(p.youAreHere);
+  const pinSlot = p.youAreHere?.enabled ? p.youAreHere.slotIndex : null;
   const walkPinSlot = pinSlot != null ? pinSlot : (fobCtx ? displayPinSlot(p.youAreHere, bogie) : null);
   const deckPlatform = fobCtx ? fobCtx.tvPlatform : p.platform;
+  const deckPin =
+    walkPinSlot != null
+      ? {
+          ...p.youAreHere,
+          slotIndex: walkPinSlot,
+          enabled: true,
+          configuredPlatform: tvPlatform,
+          samePlatform: p.youAreHere?.samePlatform
+        }
+      : p.youAreHere;
+  const highlightPin = pinSlot != null ? pinSlot : walkPinSlot;
   const withWalk = ensureWalkMetrics(
     p.coaches,
     walkPinSlot != null ? { enabled: true, slotIndex: walkPinSlot } : { enabled: false, slotIndex: null },
     bogie
   );
   const coaches = engineOnRight ? [...withWalk].reverse() : withWalk;
-  const tiles = coaches.map((c) => coachTile(c, pinSlot)).join('');
+  const tiles = coaches.map((c) => coachTile(c, highlightPin)).join('');
   const arriveClass = shouldArrive ? 'is-arriving' : '';
   const rakeClass = `rake ${engineOnRight ? 'engine-right' : 'engine-left'} ${arriveClass}`.trim();
   const count = p.coaches.length;
@@ -1051,7 +1090,7 @@ function renderFocus(p, bogie, shouldArrive) {
             <div class="rail-glow"></div>
           </div>
           ${platformHtml(
-            p.youAreHere,
+            deckPin,
             coaches,
             engineOnRight,
             deckPlatform,
