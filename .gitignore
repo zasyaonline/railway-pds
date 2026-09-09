@@ -9,3 +9,10 @@ data/sessions.json
 *.pem
 credentials
 credentilas
+keys/licence-private.pem
+docs/.env
+.zasya/
+deployment/vm/.cache/
+tts-poc/models/
+tts-poc/output/
+tts-poc/piper-bin/

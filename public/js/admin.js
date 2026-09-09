@@ -71,7 +71,7 @@ async function api(path, options = {}) {
   const res = await fetch(url, Object.assign({}, options, { headers }));
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(data.error || `HTTP ${res.status}`);
+    const err = new Error(data.message || data.error || `HTTP ${res.status}`);
     err.status = res.status;
     throw err;
   }
@@ -166,10 +166,32 @@ function setPlatformStatus(message, isError) {
   el.className = `station-status${isError ? ' error' : ''}`;
 }
 
+function lockStationEditor() {
+  document.body.classList.add('station-locked');
+  const btn = $('btnApplyStation');
+  if (btn) {
+    btn.disabled = true;
+    btn.hidden = true;
+  }
+  const preset = $('stationPreset');
+  if (preset) preset.disabled = true;
+  const code = $('stationCodeInput');
+  if (code) {
+    code.readOnly = true;
+    code.disabled = true;
+  }
+  const pinHelp = $('stationPinnedHelp');
+  if (pinHelp) pinHelp.hidden = false;
+}
+
 function renderSessions(data) {
   $('activeCount').textContent = String(data.activeCount ?? 0);
   $('refreshState').textContent = data.refreshEnabled ? 'LIVE' : 'PAUSED';
   $('refreshState').className = `stat-value ${data.refreshEnabled ? 'live' : 'paused'}`;
+
+  if (data.stationPinned || $('licenceChip')) {
+    lockStationEditor();
+  }
 
   if (Array.isArray(data.stationPresets) && data.stationPresets.length) {
     fillStationPresets(data.stationPresets);
@@ -217,7 +239,7 @@ function renderPlatforms(data) {
   const tbody = $('platformBody');
   const trains = data.trains || [];
   if (!trains.length) {
-    tbody.innerHTML = `<tr class="no-trains"><td colspan="5">No trains on the current board</td></tr>`;
+    tbody.innerHTML = `<tr class="no-trains"><td colspan="4">No trains on the current board</td></tr>`;
     return;
   }
 
@@ -237,20 +259,20 @@ function renderPlatforms(data) {
         <td class="train-no">${t.trainNo}</td>
         <td>${t.trainName || '—'}</td>
         <td>${t.ntesPlatform || '—'}${mark}</td>
-        <td>
-          <input
-            class="pf-input"
-            data-train="${t.trainNo}"
-            type="text"
-            maxlength="4"
-            placeholder="PF"
-            value="${String(value).replace(/"/g, '&quot;')}"
-            autocomplete="off"
-          >
-        </td>
-        <td class="pf-actions">
-          <button type="button" class="btn-refresh btn-start btn-pf-save" data-train="${t.trainNo}">Save</button>
-          <button type="button" class="btn-refresh btn-stop btn-pf-clear" data-train="${t.trainNo}">Clear</button>
+        <td class="override-cell">
+          <div class="pf-edit">
+            <input
+              class="pf-input"
+              data-train="${t.trainNo}"
+              type="text"
+              maxlength="4"
+              placeholder="PF"
+              value="${String(value).replace(/"/g, '&quot;')}"
+              autocomplete="off"
+            >
+            <button type="button" class="btn-refresh btn-start btn-pf-save" data-train="${t.trainNo}">OK</button>
+            <button type="button" class="btn-refresh btn-stop btn-pf-clear" data-train="${t.trainNo}">Clear</button>
+          </div>
         </td>
       </tr>`;
   }).join('');
@@ -258,6 +280,12 @@ function renderPlatforms(data) {
   tbody.querySelectorAll('.pf-input').forEach((input) => {
     input.addEventListener('input', () => {
       platformDirty[input.dataset.train] = input.value;
+    });
+    input.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      const save = tbody.querySelector(`.btn-pf-save[data-train="${input.dataset.train}"]`);
+      save?.click();
     });
     if (focusedTrain && input.dataset.train === focusedTrain) {
       input.focus();
@@ -272,7 +300,7 @@ function renderPlatforms(data) {
       const input = tbody.querySelector(`.pf-input[data-train="${trainNo}"]`);
       const platform = (input?.value || '').trim();
       if (!platform) {
-        setPlatformStatus('Enter a platform number before Save', true);
+        setPlatformStatus('Enter a platform number before OK', true);
         return;
       }
       btn.disabled = true;
@@ -327,7 +355,33 @@ async function loadPlatforms() {
   }
 }
 
+async function loadApplianceStatus() {
+  const licenceEl = $('licenceChip');
+  if (!licenceEl) return;
+  try {
+    const status = await api('/api/admin/status');
+    licenceEl.textContent = status.licenceState || status.licence || '—';
+    const lic = String(status.licenceState || status.licence || '').toUpperCase();
+    licenceEl.className = `stat-value ${lic === 'VALID' ? 'live' : 'paused'}`;
+    if ($('ntesChip')) {
+      const ntes = status.ntes || '—';
+      $('ntesChip').textContent = String(ntes).toUpperCase();
+      $('ntesChip').className = `stat-value ${ntes === 'connected' ? 'live' : 'paused'}`;
+    }
+    if (status.ntes === 'connected' && $('refreshState')) {
+      $('refreshState').textContent = 'LIVE';
+      $('refreshState').className = 'stat-value live';
+    }
+  } catch {
+    /* cloud PDS has no /api/admin/status */
+  }
+}
+
 async function applyStation() {
+  if (document.body.classList.contains('station-locked')) {
+    setStationStatus('Station identity is locked for this installation', true);
+    return;
+  }
   const stationCode = $('stationCodeInput').value.trim();
   const btn = $('btnApplyStation');
   btn.disabled = true;
@@ -343,9 +397,11 @@ async function applyStation() {
     syncStationForm(result.stationCode, result.stationName, true, result.stationNames);
     await loadPlatforms();
   } catch (err) {
-    setStationStatus(err.message, true);
+    setStationStatus(err.status === 403
+      ? (err.message || 'Station is locked to this installation licence')
+      : err.message, true);
   } finally {
-    btn.disabled = false;
+    if (!$('stationCodeInput').readOnly) btn.disabled = false;
   }
 }
 
@@ -362,9 +418,11 @@ async function unlock() {
     }
     $('gate').hidden = true;
     $('panel').hidden = false;
+    await loadApplianceStatus();
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(() => {
       loadSessions().catch(() => {});
+      loadApplianceStatus().catch(() => {});
       const active = document.activeElement;
       const editingPf = active && active.classList && active.classList.contains('pf-input');
       if (!editingPf) {
@@ -372,7 +430,11 @@ async function unlock() {
       }
     }, 5000);
   } catch (err) {
-    $('gateError').textContent = err.status === 401 ? 'Invalid admin key' : err.message;
+    $('gateError').textContent = err.status === 401
+      ? 'Invalid admin key'
+      : err.status === 404
+        ? 'Admin API not loaded (HTTP 404). On the PC run: sudo systemctl restart nginx zasya-railway-admin zasya-railway-platform'
+        : err.message;
     $('gateError').hidden = false;
   }
 }

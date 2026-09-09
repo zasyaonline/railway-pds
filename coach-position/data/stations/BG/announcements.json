@@ -1,0 +1,4 @@
+{
+  "stationCode": "BG",
+  "note": "Test templates until Railway-approved copy arrives. Overlay /etc/zasya/railway/overlays/BG/announcements.json wins."
+}

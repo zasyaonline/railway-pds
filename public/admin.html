@@ -6,8 +6,8 @@
   <title>PDS Admin — Sessions</title>
   <link rel="icon" href="/img/favicon.png" type="image/png" sizes="64x64">
   <link rel="icon" href="/img/ir-logo.png" type="image/png">
-  <link rel="stylesheet" href="/css/style.css?v=20260812b">
-  <link rel="stylesheet" href="/css/admin.css?v=20260812b">
+  <link rel="stylesheet" href="/css/style.css?v=20260825c">
+  <link rel="stylesheet" href="/css/admin.css?v=20260825c">
 </head>
 <body class="admin-body">
   <header class="header admin-header">
@@ -59,6 +59,9 @@
           Enter an NTES station code. Apply validates the code with NTES and sets the English name automatically.
           Telugu/Hindi titles come from the curated station master when available.
         </p>
+        <p class="station-help" id="stationPinnedHelp" hidden>
+          Station identity is locked for this installation. Platform overrides below still apply immediately.
+        </p>
         <div class="station-row">
           <label for="stationPreset">Preset</label>
           <select id="stationPreset"></select>
@@ -90,11 +93,10 @@
               <th>Name</th>
               <th>NTES PF</th>
               <th>Override</th>
-              <th></th>
             </tr>
           </thead>
           <tbody id="platformBody">
-            <tr class="no-trains"><td colspan="5">Unlock admin to load platforms</td></tr>
+            <tr class="no-trains"><td colspan="4">Unlock admin to load platforms</td></tr>
           </tbody>
         </table>
         <p class="station-status" id="platformStatus" hidden></p>
@@ -124,7 +126,7 @@
     </section>
   </main>
 
-  <script src="/config.js?v=20260812b"></script>
-  <script src="/js/admin.js?v=20260812b"></script>
+  <script src="/config.js?v=20260825b"></script>
+  <script src="/js/admin.js?v=20260825c"></script>
 </body>
 </html>

@@ -1,0 +1,15 @@
+[Unit]
+Description=Zasya Railway local X display (console or Xvfb)
+PartOf=zasya-railway.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/sbin/zasya-railway-display
+Restart=always
+RestartSec=3
+TimeoutStartSec=20
+
+[Install]
+WantedBy=zasya-railway.target

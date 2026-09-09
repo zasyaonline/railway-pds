@@ -1,0 +1,5 @@
+models/
+output/
+*.onnx
+*.onnx.json
+piper-bin/

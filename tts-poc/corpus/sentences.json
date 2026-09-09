@@ -1,0 +1,75 @@
+{
+  "note": "Test translations only. Not Railway-approved announcement copy.",
+  "items": [
+    {
+      "id": "T1",
+      "kind": "basic",
+      "en": "Attention please. The train is arriving shortly.",
+      "hi": "कृपया ध्यान दें। गाड़ी शीघ्र आ रही है।",
+      "te": "దయచేసి శ్రద్ధ వహించండి. రైలు త్వరలో వస్తోంది."
+    },
+    {
+      "id": "T2",
+      "kind": "train_number",
+      "en": "Train number 12723 is arriving.",
+      "hi": "गाड़ी संख्या 12723 आ रही है।",
+      "te": "రైలు నంబర్ 12723 వస్తోంది."
+    },
+    {
+      "id": "T3",
+      "kind": "platform",
+      "en": "Train number 12723 is arriving on platform number 2.",
+      "hi": "गाड़ी संख्या 12723 प्लेटफॉर्म संख्या 2 पर आ रही है।",
+      "te": "రైలు నంబర్ 12723 ప్లాట్‌ఫామ్ నంబర్ 2 పై వస్తోంది."
+    },
+    {
+      "id": "T4",
+      "kind": "delay",
+      "en": "Train number 12723 is delayed by 25 minutes.",
+      "hi": "गाड़ी संख्या 12723 पच्चीस मिनट विलंब से चल रही है।",
+      "te": "రైలు నంబర్ 12723 ఇరవై ఐదు నిమిషాలు ఆలస్యంగా నడుస్తోంది."
+    },
+    {
+      "id": "T5",
+      "kind": "large_numbers",
+      "en": "Train number 17659 is delayed by 125 minutes on platform number 12.",
+      "hi": "गाड़ी संख्या 17659 प्लेटफॉर्म संख्या 12 पर एक सौ पच्चीस मिनट विलंब से चल रही है।",
+      "te": "రైలు నంబర్ 17659 ప్లాట్‌ఫామ్ నంబర్ 12 పై నూట ఇరవై ఐదు నిమిషాలు ఆలస్యంగా నడుస్తోంది."
+    },
+    {
+      "id": "T6",
+      "kind": "time",
+      "en": "Train number 12723 is expected to arrive at 10:45 AM.",
+      "hi": "गाड़ी संख्या 12723 प्रातः 10:45 बजे आने वाली है।",
+      "te": "రైలు నంబర్ 12723 ఉదయం 10:45 కి రావాలని అంచనా."
+    },
+    {
+      "id": "T7",
+      "kind": "proper_nouns",
+      "en": "Train number 12723 Satavahana Express is arriving at Bhongir.",
+      "hi": "गाड़ी संख्या 12723 सातवाहन एक्सप्रेस भुवनगिरी में आ रही है।",
+      "te": "రైలు నంబర్ 12723 శాతవాహన ఎక్స్‌ప్రెస్ భువనగిరి వద్ద వస్తోంది."
+    },
+    {
+      "id": "Q1-cancel",
+      "kind": "cancelled",
+      "en": "Attention please. Train number 12723 Satavahana Express is cancelled today.",
+      "hi": "कृपया ध्यान दें। गाड़ी संख्या 12723 सातवाहन एक्सप्रेस आज रद्द है।",
+      "te": "దయచేసి శ్రద్ధ వహించండి. రైలు నంబర్ 12723 శాతవాహన ఎక్స్‌ప్రెస్ ఈరోజు రద్దు చేయబడింది."
+    },
+    {
+      "id": "Q1-pf-change",
+      "kind": "platform_changed",
+      "en": "Attention please. Train number 12723 will now arrive on platform number 1 instead of platform number 2.",
+      "hi": "कृपया ध्यान दें। गाड़ी संख्या 12723 अब प्लेटफॉर्म संख्या 2 के बजाय प्लेटफॉर्म संख्या 1 पर आएगी।",
+      "te": "దయచేసి శ్రద్ధ వహించండి. రైలు నంబర్ 12723 ఇప్పుడు ప్లాట్‌ఫామ్ నంబర్ 2 బదులు ప్లాట్‌ఫామ్ నంబర్ 1 పై వస్తుంది."
+    },
+    {
+      "id": "Q1-boarding",
+      "kind": "boarding",
+      "en": "Passengers are requested to board train number 12723 Satavahana Express on platform number 2.",
+      "hi": "यात्रियों से अनुरोध है कि गाड़ी संख्या 12723 सातवाहन एक्सप्रेस में प्लेटफॉर्म संख्या 2 से सवार हों।",
+      "te": "ప్రయాణికులు రైలు నంబర్ 12723 శాతవాహన ఎక్స్‌ప్రెస్‌లో ప్లాట్‌ఫామ్ నంబర్ 2 నుంచి ఎక్కవలసిందిగా కోరడమైనది."
+    }
+  ]
+}

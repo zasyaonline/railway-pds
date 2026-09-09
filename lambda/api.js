@@ -419,7 +419,12 @@ exports.handler = async (event) => {
           ntesPlatform: t.ntesPlatform || t.platform,
           platform: t.platform,
           platformOverridden: Boolean(t.platformOverridden),
-          status: t.status
+          status: t.status,
+          delay: t.delay,
+          runningState: t.runningState,
+          expectedArrival: t.expectedArrival,
+          expectedDeparture: t.expectedDeparture,
+          scheduledArrival: t.scheduledArrival
         })),
         overrides: overrides.overrides || {}
       });

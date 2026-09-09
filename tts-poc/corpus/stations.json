@@ -1,0 +1,20 @@
+{
+  "BG": {
+    "code": "BG",
+    "en": "BHONGIR",
+    "te": "భువనగిరి",
+    "hi": "भुवनगिरी"
+  },
+  "SC": {
+    "code": "SC",
+    "en": "SECUNDERABAD JUNCTION",
+    "te": "సికింద్రాబాద్ జంక్షన్",
+    "hi": "सिकंदराबाद जंक्शन"
+  },
+  "BZA": {
+    "code": "BZA",
+    "en": "VIJAYAWADA JUNCTION",
+    "te": "విజయవాడ జంక్షన్",
+    "hi": "विजयवाड़ा जंक्शन"
+  }
+}

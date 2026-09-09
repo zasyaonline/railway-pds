@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDS Admin — Sessions</title>
+  <link rel="icon" href="/platform/img/favicon.png" type="image/png" sizes="64x64">
+  <link rel="icon" href="/platform/img/ir-logo.png" type="image/png">
+  <link rel="stylesheet" href="/platform/css/style.css?v=20260909a">
+  <link rel="stylesheet" href="/platform/css/admin.css?v=20260909a">
+</head>
+<body class="admin-body">
+  <header class="header admin-header">
+    <div class="header-left">
+      <img src="/platform/img/ir-logo.png" alt="Indian Railways" class="logo">
+      <h1>PDS Admin</h1>
+    </div>
+    <div class="header-right">
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <section class="admin-gate" id="gate">
+      <label for="adminKey">Admin key</label>
+      <div class="gate-row">
+        <input id="adminKey" type="password" autocomplete="current-password" placeholder="Enter admin password">
+        <button type="button" id="btnUnlock" class="btn-refresh btn-start">Open</button>
+      </div>
+      <p class="gate-hint">Use the administrator password from install (<code>/root/zasya-admin-password</code>).</p>
+      <p class="gate-error" id="gateError" hidden></p>
+    </section>
+
+    <section class="admin-panel" id="panel" hidden>
+      <div class="admin-summary">
+        <div class="stat">
+          <span class="stat-label">Active sessions</span>
+          <span class="stat-value" id="activeCount">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Live data</span>
+          <span class="stat-value" id="refreshState">—</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Station</span>
+          <span class="stat-value station-stat" id="currentStation">—</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Licence</span>
+          <span class="stat-value" id="licenceChip">—</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">NTES</span>
+          <span class="stat-value" id="ntesChip">—</span>
+        </div>
+        <div class="admin-actions">
+          <button type="button" id="btnRefreshList" class="btn-refresh btn-start">Refresh list</button>
+          <button type="button" id="btnStopAll" class="btn-refresh btn-stop">Stop all sessions</button>
+          <button type="button" id="btnServiceStart" class="btn-refresh btn-start">Start service</button>
+          <button type="button" id="btnServiceStop" class="btn-refresh btn-stop">Stop service</button>
+        </div>
+      </div>
+
+      <section class="station-card">
+        <h2>Display station</h2>
+        <p class="station-help">
+          Station is locked to this installation (BG). Platform overrides below still apply immediately.
+        </p>
+        <p class="station-help" id="stationPinnedHelp">
+          Station identity cannot be changed from this screen.
+        </p>
+        <div class="station-row" id="stationEditor">
+          <label for="stationPreset">Preset</label>
+          <select id="stationPreset"></select>
+        </div>
+        <div class="station-row station-custom">
+          <label for="stationCodeInput">Code</label>
+          <input id="stationCodeInput" type="text" maxlength="6" placeholder="e.g. SC" autocomplete="off" spellcheck="false">
+          <label for="stationNameInput">English (NTES)</label>
+          <input id="stationNameInput" type="text" maxlength="80" placeholder="Resolved on Apply" autocomplete="off" readonly>
+          <button type="button" id="btnApplyStation" class="btn-refresh btn-start">Apply station</button>
+        </div>
+        <p class="station-resolved" id="stationResolved" hidden></p>
+        <p class="station-status" id="stationStatus" hidden></p>
+      </section>
+
+      <section class="station-card platform-card">
+        <h2>Platform overrides</h2>
+        <p class="station-help">
+          Last-minute PF changes for trains on the current board. Overrides apply immediately on the next display poll.
+          Use the microphone on a train to announce from its current status, delay, or another type.
+        </p>
+        <div class="platform-actions">
+          <button type="button" id="btnRefreshPlatforms" class="btn-refresh btn-start">Refresh platforms</button>
+          <button type="button" id="btnClearAllPlatforms" class="btn-refresh btn-stop">Clear all overrides</button>
+        </div>
+        <table class="train-table admin-table platform-table has-announce">
+          <thead>
+            <tr>
+              <th>Train</th>
+              <th>Name</th>
+              <th>Status</th>
+              <th>NTES PF</th>
+              <th>Override</th>
+            </tr>
+          </thead>
+          <tbody id="platformBody">
+            <tr class="no-trains"><td colspan="5">Unlock admin to load platforms</td></tr>
+          </tbody>
+        </table>
+        <p class="station-status" id="platformStatus" hidden></p>
+      </section>
+
+      <section class="station-card announce-card">
+        <h2>Announcements</h2>
+        <p class="station-help">
+          Offline TTS. Templates are test wording until Railway-approved copy arrives.
+          Passenger displays stay up if synthesis or speakers fail.
+        </p>
+        <p class="station-help" id="announceState">Auto — · Paused — · Queue 0</p>
+        <div class="platform-actions">
+          <button type="button" id="btnAnnounceEnable" class="btn-refresh btn-start">Enable auto</button>
+          <button type="button" id="btnAnnounceDisable" class="btn-refresh btn-stop">Disable auto</button>
+          <button type="button" id="btnAnnouncePause" class="btn-refresh btn-stop">Pause</button>
+          <button type="button" id="btnAnnounceResume" class="btn-refresh btn-start">Resume</button>
+        </div>
+        <div class="station-row">
+          <label for="announceType">Type</label>
+          <select id="announceType">
+            <option value="arriving">Arriving</option>
+            <option value="delayed">Delayed</option>
+            <option value="approaching">Approaching</option>
+            <option value="boarding">Boarding</option>
+            <option value="platform_changed">Platform changed</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="departed">Departed</option>
+            <option value="manual">Manual text</option>
+          </select>
+          <label for="announceTrain">Train</label>
+          <input id="announceTrain" type="text" maxlength="8" placeholder="12723" autocomplete="off">
+          <label for="announcePlatform">PF</label>
+          <input id="announcePlatform" type="text" maxlength="4" placeholder="2" autocomplete="off">
+        </div>
+        <div class="station-row">
+          <label for="announceExtra">Extra</label>
+          <input id="announceExtra" type="text" maxlength="200" placeholder="Optional extra sentence" autocomplete="off">
+          <label for="announceVolume">Vol</label>
+          <input id="announceVolume" type="number" min="0" max="100" value="80">
+          <button type="button" id="btnAnnounceSpeak" class="btn-refresh btn-start">Announce</button>
+          <button type="button" id="btnAnnounceVolume" class="btn-refresh btn-start">Set volume</button>
+        </div>
+        <p class="station-status" id="announceStatus" hidden></p>
+        <table class="train-table admin-table announce-table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Type</th>
+              <th>Train</th>
+              <th>Result</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="announceBody">
+            <tr class="no-trains"><td colspan="5">No announcement history</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <table class="train-table admin-table">
+        <thead>
+          <tr>
+            <th>Session</th>
+            <th>Started</th>
+            <th>Running</th>
+            <th>Last seen</th>
+            <th>Browser</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="sessionBody">
+          <tr class="no-trains"><td colspan="6">No active sessions</td></tr>
+        </tbody>
+      </table>
+
+      <p class="admin-note">
+        A session is a browser tab on the display. Idle tabs drop off after ~90s.
+        Stopping a session blanks that tab. Start/Stop service pauses in-process refresh on laptop installs;
+        on this appliance NTES is the systemd poller (status above).
+      </p>
+      <p>
+        <a class="admin-link" href="/platform/">Open platform display →</a>
+        ·
+        <a class="admin-link" href="/coach/?station=BG&amp;display=entrance-main">Open coach display →</a>
+        ·
+        <a class="admin-link" href="verify.html">Verification screen →</a>
+      </p>
+    </section>
+
+    <div id="announceTrainModal" class="announce-modal" hidden>
+      <div class="announce-modal-card" role="dialog" aria-modal="true" aria-labelledby="announceModalTitle">
+        <h3 id="announceModalTitle">Announce train</h3>
+        <p class="announce-modal-status" id="announceModalStatus"></p>
+        <p class="station-help">Suggested from current NTES status. Pick another type if you need a different announcement.</p>
+        <div class="station-row">
+          <label for="announceModalType">Type</label>
+          <select id="announceModalType">
+            <option value="arriving">Arriving</option>
+            <option value="delayed">Delayed</option>
+            <option value="approaching">Approaching</option>
+            <option value="boarding">Boarding</option>
+            <option value="platform_changed">Platform changed</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="departed">Departed</option>
+            <option value="manual">Manual text</option>
+          </select>
+        </div>
+        <div class="station-row">
+          <label for="announceModalExtra">Extra</label>
+          <input id="announceModalExtra" type="text" maxlength="200" placeholder="Optional extra sentence" autocomplete="off">
+        </div>
+        <div class="announce-modal-actions">
+          <button type="button" id="btnAnnounceModalCurrent" class="btn-refresh btn-start">Announce current</button>
+          <button type="button" id="btnAnnounceModalSpeak" class="btn-refresh btn-start">Announce selected</button>
+          <button type="button" id="btnAnnounceModalClose" class="btn-refresh btn-stop">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/platform/config.js?v=20260825b"></script>
+  <script src="admin.js?v=20260909c"></script>
+</body>
+</html>

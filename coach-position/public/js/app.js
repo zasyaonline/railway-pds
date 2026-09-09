@@ -7,8 +7,16 @@ const LANG_MS = CONFIG.LANG_ROTATE_MS || 15000;
 const SESSION_KEY = 'coach_session_id';
 const BOGIE_DEFAULT = 25;
 const WALK_SPEED_MPS = 0.65;
+/** Full platform rake grid. Short trains occupy slots from the engine; the rest stay empty. */
+const PLATFORM_SLOTS = 26;
+const FOCUS_ROTATE_MS = 20000;
+const FETCH_TIMEOUT_MS = 8000;
 
 let sessionStopped = false;
+let linkDown = false;
+let lastReceivedIso = null;
+let licenceExpired = false;
+let lastLicenceView = null;
 
 let languages = ['en', 'te', 'hi'];
 let langIndex = 0;
@@ -17,10 +25,33 @@ let typesDoc = { types: {} };
 let stationLayout = null;
 let stationsByNameMap = {};
 let lastPickMinute = -1;
+let focusRotateIndex = 0;
+let focusRotateTimer = null;
+let focusRotateKey = '';
+let skipFocusArrive = false;
 
 function $(id) { return document.getElementById(id); }
+function fetchWithTimeout(url, options = {}) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { cache: 'no-store', ...options, signal: ctrl.signal }).finally(() => {
+    clearTimeout(timer);
+  });
+}
 function qs(name) {
   return new URLSearchParams(location.search).get(name);
+}
+function publicBase() {
+  const configured = CONFIG.PUBLIC_BASE;
+  if (configured != null && String(configured).length) {
+    return String(configured).replace(/\/$/, '');
+  }
+  if (location.pathname.startsWith('/coach')) return '/coach';
+  return '';
+}
+function assetUrl(p) {
+  const path = p.startsWith('/') ? p : `/${p}`;
+  return `${publicBase()}${path}`;
 }
 const DEFAULT_STATION = 'BG';
 const DEFAULT_DISPLAY = 'entrance-main';
@@ -36,7 +67,12 @@ function displayId() {
 function displayQuery() {
   return `station=${encodeURIComponent(stationCode())}&display=${encodeURIComponent(displayId())}`;
 }
+function publicPrefix() {
+  if (location.pathname.startsWith('/coach')) return '/coach';
+  return '';
+}
 function liveApiRoot() {
+  if (location.pathname.startsWith('/coach') && !isLocalHost()) return null;
   if (API_BASE) return API_BASE;
   if (isLocalHost()) return '';
   return null;
@@ -68,7 +104,10 @@ const THEME = String(
         ? 'chart'
         : 'tv')
 ).toLowerCase();
-if (THEME === 'chart') document.body.classList.add('theme-chart');
+if (THEME === 'chart') {
+  document.body.classList.add('theme-chart');
+  document.documentElement.classList.add('theme-chart');
+}
 if (THEME === 'premium') document.body.classList.add('theme-premium');
 
 function applyViewportMode() {
@@ -118,10 +157,24 @@ function clockMinutesUntil(timeStr, now = new Date()) {
   if (diff > 720) diff -= 1440;
   return diff;
 }
+function ntesCancelled(row) {
+  return row?.runningState === 'cancelled' || /cancel/i.test(row?.status || '');
+}
+
+function ntesDeparted(row) {
+  if (row?.runningState === 'departed') return true;
+  return /^(departed|has departed)\b/i.test(String(row?.status || '').trim());
+}
+
 function liveMinutesUntil(train, hideAfter = 0) {
+  if (ntesDeparted(train)) {
+    const depGone = clockMinutesUntil(eventTime(train, 'dep'));
+    if (hideAfter > 0 && depGone != null && -depGone <= hideAfter) return 0;
+    return null;
+  }
   const arr = clockMinutesUntil(eventTime(train, 'arr'));
   const dep = clockMinutesUntil(eventTime(train, 'dep'));
-  if (dep != null && dep < 0 && -dep > hideAfter) return null;
+  if (dep != null && dep < 0) return 0;
   if (arr != null && arr > 0) return arr;
   if (dep != null && dep >= 0) return 0;
   if (arr != null && arr <= 0 && (dep == null || dep >= 0)) return 0;
@@ -145,6 +198,13 @@ function locStation(name) {
     ? window.COACH_localizeStationName(name, currentLang(), stationsByNameMap)
     : (name || '—');
 }
+function stationDisplayName(payload) {
+  const name = locStation(payload?.stationName || payload?.stationCode || 'Station');
+  const code = String(payload?.stationCode || '').trim().toUpperCase();
+  if (!code) return name;
+  if (String(name).toUpperCase() === code) return name;
+  return `${name} (${code})`;
+}
 function locTrain(name) {
   return window.COACH_localizeTrainName
     ? window.COACH_localizeTrainName(name, currentLang())
@@ -162,22 +222,11 @@ function eventTime(train, kind) {
 }
 
 function rowDeparted(row, now, hideAfter) {
+  if (ntesCancelled(row)) return true;
+  if (!ntesDeparted(row)) return false;
   const dep = clockMinutesUntil(eventTime(row, 'dep'), now);
-  const arr = clockMinutesUntil(eventTime(row, 'arr'), now);
-  const status = String(row.status || '');
-  const atPlatform = row.runningState === 'arrived' || /arriv/i.test(status);
-
-  if (row.runningState === 'departed' || /depart/i.test(status)) {
-    if (hideAfter > 0 && dep != null && -dep <= hideAfter) return false;
-    return true;
-  }
-  if (atPlatform) {
-    return dep != null && dep < 0 && -dep > hideAfter;
-  }
-  // Late / scheduled: only treat as gone once departure has passed beyond hideAfter
-  if (dep != null && dep < 0 && -dep > hideAfter) return true;
-  if (arr != null && dep == null && arr < 0 && -arr > hideAfter) return true;
-  return false;
+  if (hideAfter > 0 && dep != null && -dep <= hideAfter) return false;
+  return true;
 }
 
 function cacheAgeMinutes(payload) {
@@ -201,16 +250,21 @@ function boardLookaheadMinutes(payload) {
 }
 
 function rowVisibleOnStationBoard(row, now, hideAfter, lookaheadMinutes) {
-  if (row.runningState === 'cancelled' || /cancel/i.test(row.status || '')) return false;
+  if (ntesCancelled(row)) return false;
+  if (ntesDeparted(row)) {
+    const depGone = clockMinutesUntil(eventTime(row, 'dep'), now);
+    return hideAfter > 0 && depGone != null && -depGone <= hideAfter;
+  }
   const arr = clockMinutesUntil(eventTime(row, 'arr'), now);
   const dep = clockMinutesUntil(eventTime(row, 'dep'), now);
+  const atPlatform = row.runningState === 'arrived' || /arriv/i.test(row.status || '');
+  const late =
+    Number(row.delay) > 0 || /late|delay|विलंब|ఆలస్య/i.test(row.status || '');
+  if (atPlatform || late) return true;
+  if ((arr != null && arr < 0) || (dep != null && dep < 0)) return true;
   const events = [arr, dep].filter((x) => x != null);
   if (!events.length) return true;
-  const minEvent = Math.min(...events);
-  const maxEvent = Math.max(...events);
-  const recentDepartGrace = Math.max(hideAfter, 20);
-  if (minEvent <= lookaheadMinutes && maxEvent >= -recentDepartGrace) return true;
-  return false;
+  return Math.min(...events) <= lookaheadMinutes;
 }
 
 function trainHasRake(t) {
@@ -221,42 +275,71 @@ function trainHasRake(t) {
   );
 }
 
-function pickLiveFocus(payload, now = new Date()) {
+function asBoardTrain(payload, row) {
+  const rake = (payload.boardRakes || {})[String(row.trainNo)] || {};
+  return Object.assign({}, rake, row, { trainNo: row.trainNo });
+}
+
+function trainInLiveWindow(t, now, showBefore, hideAfter) {
+  if (rowDeparted(t, now, hideAfter) || ntesCancelled(t)) return false;
+  const arr = clockMinutesUntil(eventTime(t, 'arr'), now);
+  const dep = clockMinutesUntil(eventTime(t, 'dep'), now);
+  const atPlatform = t.runningState === 'arrived' || /arriv/i.test(t.status || '');
+  if (atPlatform) return true;
+  if (dep != null && dep < 0) return true;
+  if (arr != null && arr <= 0 && (dep == null || dep >= 0)) return true;
+  const soonest = [arr, dep].filter((x) => x != null && x >= 0);
+  return Boolean(soonest.length && Math.min(...soonest) <= showBefore);
+}
+
+function scoreLiveTrain(t, now) {
+  const arr = clockMinutesUntil(eventTime(t, 'arr'), now);
+  const dep = clockMinutesUntil(eventTime(t, 'dep'), now);
+  const atPlatform = t.runningState === 'arrived' || /arriv/i.test(t.status || '');
+  if (atPlatform || (dep != null && dep < 0) || (arr != null && arr <= 0)) {
+    return { minutesUntil: 0, priority: atPlatform ? 0 : 1 };
+  }
+  const soonest = [arr, dep].filter((x) => x != null && x >= 0);
+  return { minutesUntil: soonest.length ? Math.min(...soonest) : 0, priority: 1 };
+}
+
+/** One live train per platform (T−10, standing, or delayed until NTES departed). */
+function overlappingFocusPicks(payload, now = new Date()) {
   const showBefore = payload.showBeforeMinutes ?? 10;
   const hideAfter = payload.hideAfterDepartMinutes ?? 0;
   const rows = payload.stationBoard || [];
-  const rakes = payload.boardRakes || {};
-
-  function asTrain(r) {
-    const rake = rakes[String(r.trainNo)] || {};
-    return Object.assign({}, rake, r, { trainNo: r.trainNo });
-  }
-
-  const inWindow = [];
+  const platforms = (payload.display?.platformsShown || []).map(String);
+  const byPf = new Map();
   for (const r of rows) {
-    const t = asTrain(r);
-    if (rowDeparted(t, now, hideAfter)) continue;
-    const arr = clockMinutesUntil(eventTime(t, 'arr'), now);
-    const dep = clockMinutesUntil(eventTime(t, 'dep'), now);
-    const atPlatform = t.runningState === 'arrived' || /arriv/i.test(t.status || '');
-    if (atPlatform && (dep == null || dep >= 0)) {
-      inWindow.push({ train: t, minutesUntil: 0, inWindow: true });
-      continue;
-    }
-    const soonest = [arr, dep].filter((x) => x != null && x >= 0);
-    const minPos = soonest.length ? Math.min(...soonest) : null;
-    if (minPos != null && minPos <= showBefore) {
-      inWindow.push({ train: t, minutesUntil: minPos, inWindow: true });
+    const t = asBoardTrain(payload, r);
+    if (platforms.length && !platforms.includes(String(t.platform))) continue;
+    if (!trainInLiveWindow(t, now, showBefore, hideAfter)) continue;
+    const scored = scoreLiveTrain(t, now);
+    const cand = { train: t, minutesUntil: scored.minutesUntil, inWindow: true, priority: scored.priority };
+    const key = String(t.platform);
+    const prev = byPf.get(key);
+    if (
+      !prev ||
+      cand.priority < prev.priority ||
+      (cand.priority === prev.priority && cand.minutesUntil < prev.minutesUntil)
+    ) {
+      byPf.set(key, cand);
     }
   }
-  inWindow.sort((a, b) => (a.minutesUntil ?? 999) - (b.minutesUntil ?? 999));
-  if (inWindow[0]) return inWindow[0];
+  return [...byPf.values()].sort((a, b) => Number(a.train.platform) - Number(b.train.platform));
+}
 
+function pickLiveFocus(payload, now = new Date()) {
+  const live = overlappingFocusPicks(payload, now);
+  if (live.length) return live[0];
+
+  const hideAfter = payload.hideAfterDepartMinutes ?? 0;
+  const rows = payload.stationBoard || [];
   let best = null;
   let bestWithRake = null;
   for (const r of rows) {
-    const t = asTrain(r);
-    if (rowDeparted(t, now, hideAfter)) continue;
+    const t = asBoardTrain(payload, r);
+    if (rowDeparted(t, now, hideAfter) || ntesCancelled(t)) continue;
     const arr = clockMinutesUntil(eventTime(t, 'arr'), now);
     const dep = clockMinutesUntil(eventTime(t, 'dep'), now);
     const m = [arr, dep].filter((x) => x != null && x >= 0);
@@ -271,9 +354,19 @@ function pickLiveFocus(payload, now = new Date()) {
   return bestWithRake || best;
 }
 
+function clampPlatformSlot(slot) {
+  return Math.max(0, Math.min(PLATFORM_SLOTS - 1, slot));
+}
+
+function padRakeSlots(coaches) {
+  const list = (coaches || []).map((c) => (c && typeof c === 'object' ? c : { empty: true }));
+  while (list.length < PLATFORM_SLOTS) list.push({ empty: true });
+  return list.slice(0, PLATFORM_SLOTS);
+}
+
 function resolveClientPin(display, platform, coaches, bogie) {
   const cfg = display?.youAreHere;
-  if (!cfg || !(coaches || []).length) {
+  if (!cfg) {
     return { enabled: false, slotIndex: null, platform: String(platform), samePlatform: false };
   }
   const samePlatform = String(cfg.platform) === String(platform);
@@ -282,7 +375,7 @@ function resolveClientPin(display, platform, coaches, bogie) {
     typeof cfg.slotIndex === 'number'
       ? cfg.slotIndex
       : Math.round((Number(cfg.metersFromEngineEnd) || 0) / bogieM);
-  slot = Math.max(0, Math.min(coaches.length - 1, slot));
+  slot = clampPlatformSlot(slot);
   return {
     enabled: samePlatform,
     slotIndex: samePlatform ? slot : null,
@@ -290,7 +383,8 @@ function resolveClientPin(display, platform, coaches, bogie) {
     configuredPlatform: String(cfg.platform || ''),
     samePlatform,
     facing: cfg.facing || 'engine_left',
-    metersFromEngineEnd: cfg.metersFromEngineEnd
+    metersFromEngineEnd: cfg.metersFromEngineEnd,
+    displaySlotIndex: slot
   };
 }
 
@@ -320,8 +414,10 @@ function assembleFocus(payload, pick) {
       platform: String(t.platform),
       from: t.from || rake.from,
       to: t.to || rake.to,
-      expectedArrival: t.expectedArrival || rake.expectedArrival,
-      expectedDeparture: t.expectedDeparture || rake.expectedDeparture,
+      expectedArrival: t.expectedArrival || rake.expectedArrival || t.scheduledArrival || rake.scheduledArrival,
+      expectedDeparture: t.expectedDeparture || rake.expectedDeparture || t.scheduledDeparture || rake.scheduledDeparture,
+      scheduledArrival: t.scheduledArrival || rake.scheduledArrival || null,
+      scheduledDeparture: t.scheduledDeparture || rake.scheduledDeparture || null,
       minutesUntil: pick.minutesUntil,
       status: t.status || rake.status,
       delay: t.delay ?? rake.delay ?? 0
@@ -355,7 +451,7 @@ function updateClock() {
   $('langLabel').textContent = t('lang');
   document.documentElement.lang = currentLang();
   const minute = now.getHours() * 60 + now.getMinutes();
-  if (lastPayload && minute !== lastPickMinute) {
+  if (lastPayload && !linkDown && !licenceExpired && minute !== lastPickMinute) {
     lastPickMinute = minute;
     render(lastPayload);
   }
@@ -363,10 +459,10 @@ function updateClock() {
 
 function coachAsset(typeId) {
   const id = typeId || 'unknown';
-  if (THEME === 'chart') return `/img/chart/${id}.svg`;
+  if (THEME === 'chart') return assetUrl(`/img/chart/${id}.svg`);
   const types = (typesDoc && typesDoc.types) || {};
   const asset = (types[id] && types[id].asset) || `${id}.png`;
-  return `/img/coaches/${asset}`;
+  return assetUrl(`/img/coaches/${asset}`);
 }
 
 function normStation(s) {
@@ -435,6 +531,9 @@ function ensureWalkMetrics(coaches, youAreHere, bogie) {
 }
 
 function coachTile(coach, pinSlot) {
+  if (!coach || coach.empty) {
+    return `<div class="coach coach-empty" aria-hidden="true"></div>`;
+  }
   const pos = coach.position != null ? coach.position : coach.seq - 1;
   const aligned = pinSlot != null && pos === pinSlot;
   const typeId = coach.typeId || 'unknown';
@@ -459,26 +558,8 @@ function coachTile(coach, pinSlot) {
     </div>`;
 }
 
-function walkStripHtml(coaches, pinEnabled, pinDisplayIndex) {
-  if (!pinEnabled || !coaches.length) return '';
-  const cells = coaches.map((c, i) => {
-    const dist = formatWalk(c.walkMeters, c.walkSeconds);
-    const time = formatWalkTime(c.walkMeters, c.walkSeconds);
-    const here = c.walkMeters === 0;
-    let sideClass = '';
-    if (!here && pinDisplayIndex != null) {
-      if (i < pinDisplayIndex) sideClass = ' walk-side-left';
-      else if (i > pinDisplayIndex) sideClass = ' walk-side-right';
-    }
-    return `
-      <div class="walk-cell${here ? ' is-here' : ''}${sideClass}">
-        <span class="walk-labels">
-          <span class="walk-dist">${esc(dist)}</span>
-          ${time ? `<span class="walk-time">${esc(time)}</span>` : ''}
-        </span>
-      </div>`;
-  }).join('');
-  return `<div class="walk-strip" aria-label="Walk distance">${cells}</div>`;
+function walkStripHtml() {
+  return '';
 }
 
 const AMENITY_ICON = {
@@ -539,41 +620,36 @@ function markerToLeftPct(marker, sec, kaz) {
   return ((sec - marker) / span) * 100;
 }
 
-function pinPlatformMarker(layout, displayId) {
-  const mount = (layout?.amenities || []).find(
-    (a) => a.displayId === displayId || a.id === 'display-tv'
-  );
-  const mid = mount ? amenityMarkerMid(mount) : null;
-  return mid != null ? mid : 8.5;
-}
-
-function amenityMarkerForRake(amenity, engineOnRight) {
-  if (amenity.category === 'circulation') {
-    if (engineOnRight && amenity.markerFrom != null) return Number(amenity.markerFrom);
-    if (!engineOnRight && amenity.markerTo != null) return Number(amenity.markerTo);
-  }
-  return amenityMarkerMid(amenity);
-}
-
-/** Map survey marker to % along the coach rake (aligned with pin + engine side). */
-function amenityPctOnRake(markerMid, layout, platformId, coachCount, engineOnRight, youAreHere) {
-  const pinMarker = pinPlatformMarker(layout, displayId());
-  const pinSlot = youAreHere.slotIndex;
-  const engineM = engineOnRight ? pinMarker + pinSlot : pinMarker - pinSlot;
-  let compSlot = engineOnRight ? engineM - markerMid : markerMid - engineM;
-  compSlot = Math.round(compSlot);
-  compSlot = Math.max(0, Math.min(coachCount - 1, compSlot));
-  const displaySlot = engineOnRight ? coachCount - 1 - compSlot : compSlot;
-  return ((displaySlot + 0.5) / coachCount) * 100;
-}
-
-function amenityPositionPct(markerMid, layout, platformId, coachCount, engineOnRight, youAreHere, pinAligned, amenity) {
-  const marker = amenity && pinAligned ? amenityMarkerForRake(amenity, engineOnRight) : markerMid;
-  if (pinAligned && coachCount > 0 && youAreHere?.slotIndex != null) {
-    return amenityPctOnRake(marker, layout, platformId, coachCount, engineOnRight, youAreHere);
-  }
+/** Screen % on the TV platform. Left = Secunderabad; never follows the featured rake. */
+function surveyPctOnDisplay(layout, platformId, marker) {
   const { sec, kaz } = platformMarkerSpan(layout, platformId);
-  return markerToLeftPct(markerMid, sec, kaz);
+  return markerToLeftPct(marker, sec, kaz);
+}
+
+function amenityScreenPct(amenity, layout, platformId) {
+  if (!amenity) return null;
+  return surveyPctOnDisplay(layout, platformId, amenityMarkerMid(amenity));
+}
+
+function pinScreenPct(layout, youAreHere) {
+  const tvPf = displaySidePlatform(youAreHere);
+  const mount = (layout?.amenities || []).find(
+    (a) => a.displayId === displayId() || a.id === 'display-tv'
+  );
+  const fromMount = amenityScreenPct(mount, layout, tvPf);
+  if (fromMount != null) return fromMount;
+  const slot = displayPinSlot(youAreHere, BOGIE_DEFAULT) ?? 7;
+  return ((clampPlatformSlot(slot) + 0.5) / PLATFORM_SLOTS) * 100;
+}
+
+function fobScreenPct(layout, youAreHere) {
+  const tvPf = displaySidePlatform(youAreHere);
+  const fob = fobOnDisplaySide(layout, tvPf);
+  return amenityScreenPct(fob, layout, tvPf) ?? 70;
+}
+
+function amenityPositionPct(markerMid, layout, platformId) {
+  return surveyPctOnDisplay(layout, platformId, markerMid);
 }
 
 function amenityLabel(amenity) {
@@ -584,9 +660,9 @@ function amenityLabel(amenity) {
 
 function amenityIconSrc(amenity) {
   const building = AMENITY_BUILDING_IMG[amenity.id];
-  if (building) return `/img/amenities/${building}`;
+  if (building) return assetUrl(`/img/amenities/${building}`);
   const file = AMENITY_ICON[amenity.category] || 'facility.svg';
-  return `/img/amenities/${file}`;
+  return assetUrl(`/img/amenities/${file}`);
 }
 
 function amenitiesForPlatform(layout, platformId) {
@@ -621,8 +697,9 @@ function displaySidePlatform(youAreHere) {
 
 function displayPinSlot(youAreHere, bogie) {
   if (youAreHere?.slotIndex != null) return youAreHere.slotIndex;
+  if (youAreHere?.displaySlotIndex != null) return youAreHere.displaySlotIndex;
   if (typeof youAreHere?.metersFromEngineEnd === 'number') {
-    return Math.round(youAreHere.metersFromEngineEnd / (bogie || BOGIE_DEFAULT));
+    return clampPlatformSlot(Math.round(youAreHere.metersFromEngineEnd / (bogie || BOGIE_DEFAULT)));
   }
   return null;
 }
@@ -682,66 +759,18 @@ function shouldShowFobOverlay(trainPlatform, layout, youAreHere) {
   return crossPlatformFobContext(youAreHere, trainPlatform, layout) != null;
 }
 
-function fobAnchorPct(youAreHere, coachCount, engineOnRight, bogie, walkMeters) {
-  const bogieM = bogie || BOGIE_DEFAULT;
-  let pinSlot = youAreHere?.slotIndex;
-  if (pinSlot == null && typeof youAreHere?.metersFromEngineEnd === 'number') {
-    pinSlot = Math.round(youAreHere.metersFromEngineEnd / bogieM);
-  }
-  if (pinSlot == null) pinSlot = 7;
-  if (!coachCount) return 50;
-  const offset = Math.round(walkMeters / bogieM);
-  let targetSlot = pinSlot + offset;
-  targetSlot = Math.max(0, Math.min(coachCount - 1, targetSlot));
-  const displaySlot = engineOnRight ? coachCount - 1 - targetSlot : targetSlot;
-  return ((displaySlot + 0.5) / coachCount) * 100;
-}
-
-function fobBridgeOverlayHtml(
-  trainPlatform,
-  layout,
-  youAreHere,
-  coachCount,
-  engineOnRight,
-  bogie,
-  pinAligned,
-  layoutPin
-) {
+function fobBridgeOverlayHtml(trainPlatform, layout, youAreHere) {
   if (!shouldShowFobOverlay(trainPlatform, layout, youAreHere)) return '';
   const label = t('amenityFob');
-  const tvPf = displaySidePlatform(youAreHere);
-  const fob = fobOnDisplaySide(layout, tvPf);
-  const crossPlatform = crossPlatformFobContext(youAreHere, trainPlatform, layout) != null;
-  let anchor;
-
-  /* Cross-platform: FOB stays at the fixed PF1 survey marker (same as other PF1 amenities). */
-  if (crossPlatform && pinAligned && layoutPin?.slotIndex != null && fob && coachCount) {
-    const marker = amenityMarkerForRake(fob, engineOnRight);
-    anchor = amenityPctOnRake(marker, layout, tvPf, coachCount, engineOnRight, layoutPin);
-  } else {
-    const walkM = fobWalkMeters(layout, tvPf);
-    const pinForAnchor = {
-      slotIndex: displayPinSlot(youAreHere, bogie),
-      metersFromEngineEnd: youAreHere?.metersFromEngineEnd
-    };
-    if (coachCount && (pinForAnchor.slotIndex != null || pinForAnchor.metersFromEngineEnd != null)) {
-      anchor = fobAnchorPct(pinForAnchor, coachCount, engineOnRight, bogie, walkM);
-    } else if (fob) {
-      const mid = amenityMarkerMid(fob);
-      const { sec, kaz } = platformMarkerSpan(layout, tvPf);
-      anchor = markerToLeftPct(mid, sec, kaz) ?? 50;
-    } else {
-      anchor = 50;
-    }
-  }
-
+  const anchor = fobScreenPct(layout, youAreHere);
   return `
     <div class="fob-bridge-overlay" style="--fob-anchor:${anchor.toFixed(2)}%" role="img" aria-label="${esc(label)}">
-      <img class="fob-bridge-art" src="/img/amenities/fob-transparent.png" alt="" draggable="false">
+      <img class="fob-bridge-art" src="${assetUrl('/img/amenities/fob-steps.png')}" alt="" draggable="false">
+      <span class="fob-bridge-label">${esc(label)}</span>
     </div>`;
 }
 
-function amenitiesStripHtml(platformId, layout, youAreHere, coachCount, engineOnRight, pinAligned) {
+function amenitiesStripHtml(platformId, layout, youAreHere) {
   const items = amenitiesForPlatform(layout, platformId);
   if (!items.length) return '';
   const tvPlatform = displaySidePlatform(youAreHere);
@@ -750,16 +779,7 @@ function amenitiesStripHtml(platformId, layout, youAreHere, coachCount, engineOn
   const pins = items
     .map((a) => {
       const mid = amenityMarkerMid(a);
-      const pct = amenityPositionPct(
-        mid,
-        layout,
-        platformId,
-        coachCount,
-        engineOnRight,
-        youAreHere,
-        pinAligned,
-        a
-      );
+      const pct = amenityPositionPct(mid, layout, platformId);
       if (pct == null) return '';
       const bucket = Math.round(pct / 3);
       const stack = stackBuckets.get(bucket) || 0;
@@ -793,12 +813,8 @@ function crossPlatformNoteHtml(youAreHere, trainPlatform, layout) {
   const ctx = crossPlatformFobContext(youAreHere, trainPlatform, layout);
   if (!ctx) return '';
   const fobName = amenityLabel(ctx.entry);
-  const dist = `${Math.round(ctx.walkMeters)}${t('meters')}`;
-  const time = formatWalkTime(ctx.walkMeters, ctx.walkSeconds);
+  const tvPf = displaySidePlatform(youAreHere);
   if (THEME === 'premium') {
-    const walkLine = t('wayfindWalkSummary')
-      .replace('{dist}', esc(dist))
-      .replace('{time}', esc(time));
     const detail = t('wayfindFobDetail')
       .replace('{fob}', esc(fobName))
       .replace('{n}', esc(String(trainPlatform)));
@@ -806,33 +822,28 @@ function crossPlatformNoteHtml(youAreHere, trainPlatform, layout) {
       <aside class="wayfind-panel" role="status">
         <div class="wayfind-pf"><small>${esc(t('platform'))}</small>${esc(String(trainPlatform))}</div>
         <div class="wayfind-copy">
-          <div class="wayfind-walk">${walkLine}</div>
-          <div class="wayfind-detail">${detail}</div>
+          <div class="wayfind-detail">${esc(t('youAreHere'))} · ${esc(t('platform'))} ${esc(tvPf)}. ${detail}</div>
         </div>
       </aside>`;
   }
   const line1 = t('trainOnPlatform').replace('{n}', esc(String(trainPlatform)));
-  const line2 = t('useFobToReachWithWalk')
+  const line2 = t('useFobToReach')
     .replace('{fob}', esc(fobName))
-    .replace('{n}', esc(String(trainPlatform)))
-    .replace('{dist}', esc(dist))
-    .replace('{time}', esc(time));
+    .replace('{n}', esc(String(trainPlatform)));
   return `<p class="pin-note pin-note-cross">${line1}<br>${line2}</p>`;
 }
 
 function platformHtml(youAreHere, coaches, engineOnRight, platformId, layout, walkPinSlot, trainPlatform, bogie) {
-  const count = coaches.length;
-  const pinEnabled = walkPinSlot != null && count;
+  const count = PLATFORM_SLOTS;
+  const pinEnabled = walkPinSlot != null;
   let pinDisplayIndex = null;
   let pin = '';
   if (pinEnabled) {
-    pinDisplayIndex = engineOnRight
-      ? count - 1 - walkPinSlot
-      : walkPinSlot;
-    const pct = ((pinDisplayIndex + 0.5) / count) * 100;
+    const pct = pinScreenPct(layout, youAreHere);
+    pinDisplayIndex = Math.round((pct / 100) * count - 0.5);
     pin = `
-      <div class="you-pin" style="left:${pct}%">
-        <img class="traveler" src="/img/you-are-here.png" alt="" draggable="false">
+      <div class="you-pin" style="left:${pct.toFixed(2)}%">
+        <img class="traveler" src="${assetUrl('/img/you-are-here.png')}" alt="" draggable="false">
         <div class="pin-cluster">
           <span class="label">${t('youAreHere')}</span>
         </div>
@@ -841,35 +852,11 @@ function platformHtml(youAreHere, coaches, engineOnRight, platformId, layout, wa
 
   const ticks = coaches.map(() => '<span class="bay-tick"></span>').join('');
   const tvPlatform = displaySidePlatform(youAreHere);
-  const amenitiesOnBuilding = String(platformId) === String(tvPlatform);
-  const pinAligned = pinEnabled && amenitiesOnBuilding;
-  const layoutPin = walkPinSlot != null
-    ? {
-        ...youAreHere,
-        slotIndex: walkPinSlot,
-        enabled: true,
-        configuredPlatform: tvPlatform
-      }
-    : youAreHere;
-  const amenitiesHtml = amenitiesStripHtml(
-    platformId,
-    layout,
-    layoutPin,
-    count,
-    engineOnRight,
-    pinAligned
-  );
-  const trackAmenities = amenitiesOnBuilding ? '' : amenitiesHtml;
-  const buildingAmenities = amenitiesOnBuilding ? amenitiesHtml : '';
+  const amenitiesHtml = amenitiesStripHtml(tvPlatform, layout, youAreHere);
   const fobHtml = fobBridgeOverlayHtml(
     trainPlatform != null ? trainPlatform : platformId,
     layout,
-    youAreHere,
-    count,
-    engineOnRight,
-    bogie,
-    pinAligned,
-    layoutPin
+    youAreHere
   );
 
   return `
@@ -879,12 +866,11 @@ function platformHtml(youAreHere, coaches, engineOnRight, platformId, layout, wa
         <div class="platform-grain" aria-hidden="true"></div>
         <div class="yellow-line" aria-hidden="true"></div>
         ${fobHtml}
-        ${trackAmenities}
         <div class="bay-ticks" aria-hidden="true">${ticks}</div>
         <div class="platform-wayfind">
           ${walkStripHtml(coaches, pinEnabled, pinDisplayIndex)}
           <div class="pin-row${pinEnabled ? '' : ' pin-row-empty'}">${pin}</div>
-          ${buildingAmenities}
+          ${amenitiesHtml}
         </div>
       </div>
     </div>`;
@@ -940,13 +926,37 @@ function headingBanner(heading) {
   return `<div class="heading-banner heading-unknown">${towardBits}</div>`;
 }
 
+function ensureFocusRotation() {
+  if (focusRotateTimer) return;
+  focusRotateTimer = setInterval(() => {
+    if (!lastPayload || linkDown || licenceExpired) return;
+    const live = overlappingFocusPicks(lastPayload);
+    if (live.length <= 1) return;
+    focusRotateIndex = (focusRotateIndex + 1) % live.length;
+    skipFocusArrive = true;
+    render(lastPayload);
+    skipFocusArrive = false;
+  }, FOCUS_ROTATE_MS);
+}
+
 function resolveFocusForRender(payload) {
+  const live = overlappingFocusPicks(payload);
+  const key = live.map((p) => `${p.train.trainNo}@${p.train.platform}`).join('|');
+  if (key !== focusRotateKey) {
+    focusRotateKey = key;
+    if (!live.length || focusRotateIndex >= live.length) focusRotateIndex = 0;
+  }
+  ensureFocusRotation();
+  if (live.length) {
+    return assembleFocus(payload, live[focusRotateIndex % live.length]);
+  }
+
   const pick = pickLiveFocus(payload);
   if (pick) return assembleFocus(payload, pick);
 
   const serverFocus = payload?.focus;
   if (serverFocus?.train && (serverFocus.coaches?.length || serverFocus.compositionAvailable)) {
-  const hideAfter = payload.hideAfterDepartMinutes ?? 0;
+    const hideAfter = payload.hideAfterDepartMinutes ?? 0;
     const now = new Date();
     if (!rowDeparted(serverFocus.train, now, hideAfter)) {
       return serverFocus;
@@ -973,9 +983,10 @@ function renderStationBoard(rows, focusTrainNo) {
   if (!visible.length) return '';
   const body = visible.map((r) => {
     const active = focusTrainNo && String(r.trainNo) === String(focusTrainNo);
+    const minsLate = trainDelayMinutes(r);
     const delay =
-      r.delay > 0
-        ? `<span class="delay">${esc(r.delay)} ${t('min')}</span>`
+      minsLate > 0
+        ? `<span class="delay">${esc(minsLate)} ${t('min')}</span>`
         : `<span class="ontime">—</span>`;
     return `
       <tr class="${active ? 'is-focus' : ''}">
@@ -1009,6 +1020,52 @@ function renderStationBoard(rows, focusTrainNo) {
     </section>`;
 }
 
+function prettyClock(timeStr) {
+  if (!timeStr || timeStr === '--') return '';
+  return String(timeStr).trim();
+}
+
+function delayFromClocks(scheduled, expected) {
+  const a = timeToMinutes(scheduled);
+  const b = timeToMinutes(expected);
+  if (a == null || b == null) return 0;
+  let diff = b - a;
+  if (diff < -720) diff += 1440;
+  if (diff < 0 || diff > 720) return 0;
+  return diff;
+}
+
+function trainDelayMinutes(train) {
+  const fromField = Number(train?.delay);
+  const status = String(train?.status || '');
+  const m = status.match(/(\d+)/);
+  const fromStatus =
+    m && /late|delay|विलंब|आलस्य|ఆలస్య/i.test(status) ? Number(m[1]) : 0;
+  return Math.max(
+    Number.isFinite(fromField) && fromField > 0 ? fromField : 0,
+    fromStatus,
+    delayFromClocks(train?.scheduledArrival, train?.expectedArrival),
+    delayFromClocks(train?.scheduledDeparture, train?.expectedDeparture)
+  );
+}
+
+function focusScheduleHtml(train) {
+  const arr = prettyClock(eventTime(train, 'arr'));
+  const dep = prettyClock(eventTime(train, 'dep'));
+  const bits = [];
+  if (arr) {
+    bits.push(`<span class="focus-when"><small>${esc(t('arr'))}</small>${esc(arr)}</span>`);
+  }
+  if (dep && dep !== arr) {
+    bits.push(`<span class="focus-when"><small>${esc(t('dep'))}</small>${esc(dep)}</span>`);
+  }
+  const delayMins = trainDelayMinutes(train);
+  if (delayMins > 0) {
+    bits.push(`<span class="focus-delay">${esc(t('lateBy').replace('{n}', String(delayMins)))}</span>`);
+  }
+  return bits.join('');
+}
+
 function renderFocus(p, bogie, shouldArrive) {
   if (!p) {
     return `<section class="focus-panel"><div class="unavailable">${t('idle')}</div></section>`;
@@ -1026,6 +1083,7 @@ function renderFocus(p, bogie, shouldArrive) {
         ? t('now')
         : `${mins} ${t('min')}`;
   const kicker = p.inWindow ? t('nextArrival') : t('next');
+  const schedule = focusScheduleHtml(train);
 
   const header = `
     <div class="focus-header">
@@ -1034,6 +1092,7 @@ function renderFocus(p, bogie, shouldArrive) {
         <div class="focus-id">
           <strong>${esc(train.trainNo)}</strong>
           <span>${esc(locTrain(train.trainName || ''))}</span>
+          ${schedule}
         </div>
         <div class="focus-meta">
           <span class="pill">${t('platform')} ${esc(p.platform)}</span>
@@ -1046,32 +1105,29 @@ function renderFocus(p, bogie, shouldArrive) {
     return `<section class="focus-panel">${header}<div class="unavailable">${t('unavailable')}</div></section>`;
   }
 
-  const fobCtx = crossPlatformFobContext(p.youAreHere, p.platform, stationLayout);
-  const tvPlatform = fobCtx ? fobCtx.tvPlatform : displaySidePlatform(p.youAreHere);
+  const tvPlatform = displaySidePlatform(p.youAreHere);
   const pinSlot = p.youAreHere?.enabled ? p.youAreHere.slotIndex : null;
-  const walkPinSlot = pinSlot != null ? pinSlot : (fobCtx ? displayPinSlot(p.youAreHere, bogie) : null);
-  const deckPlatform = fobCtx ? fobCtx.tvPlatform : p.platform;
-  const deckPin =
-    walkPinSlot != null
-      ? {
-          ...p.youAreHere,
-          slotIndex: walkPinSlot,
-          enabled: true,
-          configuredPlatform: tvPlatform,
-          samePlatform: p.youAreHere?.samePlatform
-        }
-      : p.youAreHere;
-  const highlightPin = pinSlot != null ? pinSlot : walkPinSlot;
+  const walkPinSlot = pinSlot != null ? pinSlot : displayPinSlot(p.youAreHere, bogie);
+  const deckPlatform = tvPlatform;
+  const deckPin = {
+    ...p.youAreHere,
+    slotIndex: walkPinSlot,
+    enabled: true,
+    configuredPlatform: tvPlatform,
+    samePlatform: p.youAreHere?.samePlatform
+  };
+  const highlightPin = p.youAreHere?.samePlatform ? pinSlot : null;
   const withWalk = ensureWalkMetrics(
     p.coaches,
     walkPinSlot != null ? { enabled: true, slotIndex: walkPinSlot } : { enabled: false, slotIndex: null },
     bogie
   );
-  const coaches = engineOnRight ? [...withWalk].reverse() : withWalk;
+  const padded = padRakeSlots(withWalk);
+  const coaches = engineOnRight ? [...padded].reverse() : padded;
   const tiles = coaches.map((c) => coachTile(c, highlightPin)).join('');
   const arriveClass = shouldArrive ? 'is-arriving' : '';
   const rakeClass = `rake ${engineOnRight ? 'engine-right' : 'engine-left'} ${arriveClass}`.trim();
-  const count = p.coaches.length;
+  const count = PLATFORM_SLOTS;
   const pinNote = crossPlatformNoteHtml(p.youAreHere, p.platform, stationLayout);
 
   return `
@@ -1113,12 +1169,13 @@ function render(payload) {
   }
 
   const title = locStation(payload.stationName || payload.stationCode || 'Station');
+  const stationShown = stationDisplayName(payload);
   if (THEME === 'chart') {
-    $('stationTitle').textContent = `${t('coachPosition')} | ${String(payload.stationCode || title).toUpperCase()}`;
+    $('stationTitle').textContent = `${t('coachPosition')} | ${stationShown}`;
   } else if (THEME === 'premium') {
-    $('stationTitle').textContent = String(payload.stationCode || title).toUpperCase();
+    $('stationTitle').textContent = stationShown;
   } else {
-    $('stationTitle').textContent = String(title).toUpperCase();
+    $('stationTitle').textContent = String(stationShown).toUpperCase();
   }
   document.title = `${title} — Coach Position`;
   document.documentElement.lang = currentLang();
@@ -1126,45 +1183,21 @@ function render(payload) {
     ? `${payload.display.name} · ${payload.display.mode}`
     : '';
   const adminLink = document.querySelector('.admin-link');
-  if (adminLink) adminLink.textContent = t('admin');
-  const q = displayQuery();
-  const linkCurrent = $('linkCurrentTv');
-  const linkPremium = $('linkPremiumTv');
-  const linkChart = $('linkChartView');
-  if (linkCurrent) {
-    linkCurrent.href = `/?${q}`;
-    linkCurrent.textContent = t('currentTvView');
-    linkCurrent.hidden = THEME === 'tv';
+  if (adminLink) {
+    adminLink.textContent = t('admin');
+    if (publicPrefix()) adminLink.href = '/admin';
   }
-  if (linkPremium) {
-    linkPremium.href = `/premium.html?${q}`;
-    linkPremium.textContent = t('premiumView');
-    linkPremium.hidden = THEME === 'premium';
-  }
-  if (linkChart) {
-    linkChart.href = `/chart.html?${q}`;
-    linkChart.textContent = t('chartView');
-    linkChart.hidden = THEME === 'chart';
-  }
-  /* Legacy single themeLink (older HTML) */
-  const themeLink = $('themeLink');
-  if (themeLink && !linkCurrent && !linkPremium && !linkChart) {
-    if (THEME === 'premium') {
-      themeLink.href = `/?${q}`;
-      themeLink.textContent = t('currentTvView');
-    } else if (THEME === 'chart') {
-      themeLink.href = `/?${q}`;
-      themeLink.textContent = t('tvView');
-    } else {
-      themeLink.href = `/premium.html?${q}`;
-      themeLink.textContent = t('premiumView');
-    }
-  }
+  const themeNav = document.querySelector('.theme-nav');
+  if (themeNav) themeNav.hidden = true;
+  ['linkCurrentTv', 'linkPremiumTv', 'linkChartView', 'themeLink'].forEach((id) => {
+    const el = $(id);
+    if (el) el.hidden = true;
+  });
 
   const focus = resolveFocusForRender(payload);
   lastPickMinute = new Date().getHours() * 60 + new Date().getMinutes();
 
-  $('footerMeta').textContent = `${payload.stationCode || ''} · ${payload.dataSource === 'ntes-live' ? t('live') : (payload.dataSource || 'cache')} · display ${payload.display?.id || '—'}`;
+  $('footerMeta').textContent = `${stationDisplayName(payload)} · ${payload.dataSource === 'ntes-live' ? t('live') : (payload.dataSource || 'cache')} · display ${payload.display?.id || '—'}`;
   const cacheAge = cacheAgeMinutes(payload);
   if (cacheAge != null && cacheAge > 10) {
     $('footerMeta').textContent += ` · cache ${Math.round(cacheAge)}m old`;
@@ -1174,7 +1207,7 @@ function render(payload) {
     .replace('{bogie}', String(payload.bogieLengthMeters ?? 25))
     .replace('{coaches}', String(focus?.coachCount || '—'));
   const focusKey = focus?.train?.trainNo ? `${focus.train.trainNo}@${focus.platform}` : '';
-  const shouldArrive = Boolean(focusKey && focusKey !== window.__coachFocusKey);
+  const shouldArrive = Boolean(!skipFocusArrive && focusKey && focusKey !== window.__coachFocusKey);
   if (focusKey) window.__coachFocusKey = focusKey;
 
   const board = $('board');
@@ -1194,7 +1227,7 @@ async function loadTypes() {
   const apiRoot = liveApiRoot();
   if (apiRoot !== null) {
     try {
-      const res = await fetch(`${apiRoot}/api/coach-types`);
+      const res = await fetchWithTimeout(`${apiRoot}/api/coach-types`);
       if (res.ok) {
         typesDoc = await res.json();
         return;
@@ -1202,14 +1235,14 @@ async function loadTypes() {
     } catch { /* fall through */ }
   }
   try {
-    const res = await fetch('/data/coach_types.json', { cache: 'no-store' });
+    const res = await fetchWithTimeout('/data/coach_types.json');
     if (res.ok) typesDoc = await res.json();
   } catch { /* ignore */ }
 }
 
 async function loadStations() {
   try {
-    const res = await fetch('/data/stations.json', { cache: 'no-store' });
+    const res = await fetchWithTimeout('/data/stations.json');
     if (res.ok) {
       const master = await res.json();
       stationsByNameMap = window.COACH_stationsByName ? window.COACH_stationsByName(master) : {};
@@ -1224,7 +1257,7 @@ async function loadLayout() {
   ];
   for (const url of urls) {
     try {
-      const res = await fetch(url, { cache: 'no-store' });
+      const res = await fetchWithTimeout(url);
       if (res.ok) {
         stationLayout = await res.json();
         return;
@@ -1242,7 +1275,7 @@ async function loadDisplaysDoc() {
   ].filter(Boolean);
   for (const url of urls) {
     try {
-      const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
+      const res = await fetchWithTimeout(url, { headers: { Accept: 'application/json' } });
       const ct = res.headers.get('content-type') || '';
       if (!res.ok || !ct.includes('application/json')) continue;
       displaysDocCache = await res.json();
@@ -1252,8 +1285,147 @@ async function loadDisplaysDoc() {
   return displaysDocCache;
 }
 
+function ensureLinkDownOverlay() {
+  let el = $('linkDownOverlay');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'linkDownOverlay';
+  el.className = 'link-down-overlay';
+  el.hidden = true;
+  el.setAttribute('role', 'alert');
+  document.body.appendChild(el);
+  return el;
+}
+
+function paintLinkDownOverlay() {
+  const el = ensureLinkDownOverlay();
+  const last = lastReceivedIso
+    ? `${t('lastReceived')}: ${new Date(lastReceivedIso).toLocaleString(locale())}`
+    : '';
+  el.innerHTML = `
+    <div class="link-down-card">
+      <p class="link-down-kicker">${esc(t('offline'))}</p>
+      <h2>${esc(t('linkDownTitle'))}</h2>
+      <p>${esc(t('linkDownBody'))}</p>
+      ${last ? `<p class="link-down-meta">${esc(last)}</p>` : ''}
+      <p class="link-down-retry">${esc(t('linkDownRetry'))}</p>
+    </div>`;
+}
+
+function setLinkDown(down) {
+  if (sessionStopped || licenceExpired) down = false;
+  linkDown = Boolean(down);
+  const el = ensureLinkDownOverlay();
+  el.hidden = !linkDown;
+  document.body.classList.toggle('link-down', linkDown);
+  if (linkDown) paintLinkDownOverlay();
+}
+
+function isLicenceBlockedPayload(data) {
+  if (!data) return false;
+  const state = String(data.state || '').toUpperCase();
+  return data.error === 'licence_blocked' || data.blocked === true
+    || state === 'BLOCKED' || state === 'INVALID' || state === 'MISSING';
+}
+
+function formatLicenceUntil(isoDate) {
+  if (!isoDate) return '';
+  return new Date(`${isoDate}T23:59:59Z`).toLocaleDateString(locale(), {
+    day: 'numeric', month: 'short', year: 'numeric'
+  });
+}
+
+function ensureLicenceExpiredOverlay() {
+  let el = $('licenceExpiredOverlay');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'licenceExpiredOverlay';
+  el.className = 'link-down-overlay licence-expired-overlay';
+  el.hidden = true;
+  el.setAttribute('role', 'alertdialog');
+  document.body.appendChild(el);
+  return el;
+}
+
+function paintLicenceExpiredOverlay(data) {
+  const el = ensureLicenceExpiredOverlay();
+  const until = data?.validUntil ? `${t('validUntil')}: ${formatLicenceUntil(data.validUntil)}` : '';
+  el.innerHTML = `
+    <div class="link-down-card">
+      <p class="link-down-kicker">${esc(t('licenceExpiredKicker'))}</p>
+      <h2>${esc(t('licenceExpiredTitle'))}</h2>
+      <p>${esc(t('licenceExpiredBody'))}</p>
+      ${until ? `<p class="link-down-meta">${esc(until)}</p>` : ''}
+    </div>`;
+}
+
+function setLicenceExpired(data) {
+  licenceExpired = Boolean(data);
+  const el = ensureLicenceExpiredOverlay();
+  el.hidden = !licenceExpired;
+  document.body.classList.toggle('licence-expired', licenceExpired);
+  if (licenceExpired) {
+    setLinkDown(false);
+    paintLicenceExpiredOverlay(data);
+  }
+}
+
+function ensureLicenceExpiringBanner() {
+  let el = $('licenceExpiringBanner');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'licenceExpiringBanner';
+  el.className = 'licence-expiring-banner';
+  el.hidden = true;
+  el.setAttribute('role', 'status');
+  document.body.appendChild(el);
+  return el;
+}
+
+function setLicenceExpiring(data) {
+  const el = ensureLicenceExpiringBanner();
+  const show = Boolean(data) && !licenceExpired && String(data.state || '').toUpperCase() === 'EXPIRING';
+  el.hidden = !show;
+  document.body.classList.toggle('licence-expiring', show);
+  if (!show) return;
+  el.textContent = t('licenceExpiring')
+    .replace('{date}', formatLicenceUntil(data.validUntil))
+    .replace('{n}', String(Math.max(0, data.daysLeft ?? 0)));
+}
+
+function applyLicenceUi(data) {
+  if (!data) return;
+  lastLicenceView = data;
+  if (isLicenceBlockedPayload(data)) {
+    setLicenceExpired(data);
+    setLicenceExpiring(null);
+    return;
+  }
+  setLicenceExpired(null);
+  setLicenceExpiring(data);
+}
+
+async function refreshLicenceStatus() {
+  try {
+    const res = await fetchWithTimeout('/api/licence/status', { headers: { Accept: 'application/json' } });
+    if (!res.ok) return;
+    applyLicenceUi(await res.json());
+  } catch {
+    /* local coach without licence endpoint */
+  }
+}
+
+function acceptBoardPayload(data, displaysDoc) {
+  lastReceivedIso = data.generatedAt || data.liveFetchedAt || new Date().toISOString();
+  setLinkDown(false);
+  if (data.licence) applyLicenceUi(data.licence);
+  if (licenceExpired) return;
+  render(applyDisplay(data, displaysDoc));
+}
+
 function showSessionStopped() {
   sessionStopped = true;
+  setLinkDown(false);
   $('board').innerHTML = `
     <div class="idle session-stopped">
       ${esc(t('sessionStopped'))}
@@ -1272,6 +1444,8 @@ function reconnectSession() {
 
 async function loadBoard() {
   if (sessionStopped) return;
+  await refreshLicenceStatus();
+  if (licenceExpired) return;
   const display = displayId();
   const station = stationCode();
   const sessionId = getSessionId();
@@ -1280,25 +1454,27 @@ async function loadBoard() {
   const apiRoot = liveApiRoot();
   if (apiRoot !== null) {
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `${apiRoot}/api/coach-board?station=${encodeURIComponent(station)}&display=${encodeURIComponent(display)}&sessionId=${encodeURIComponent(sessionId)}`,
-        {
-          cache: 'no-store',
-          headers: { 'X-Session-Id': sessionId, Accept: 'application/json' }
-        }
+        { headers: { 'X-Session-Id': sessionId, Accept: 'application/json' } }
       );
       const data = await res.json().catch(() => null);
+      if (isLicenceBlockedPayload(data)) {
+        applyLicenceUi(data);
+        return;
+      }
       if (isSessionStoppedPayload(data) || (res.status === 409 && isSessionStoppedPayload(data))) {
         clearSessionId();
         showSessionStopped();
         return;
       }
       if (res.ok && data && (data.platforms || data.focus || data.stationBoard)) {
-        render(applyDisplay(data, displaysDoc));
+        acceptBoardPayload(data, displaysDoc);
         return;
       }
     } catch {
-      /* fall through to static cache */
+      if (!licenceExpired) setLinkDown(true);
+      return;
     }
   }
 
@@ -1308,20 +1484,23 @@ async function loadBoard() {
   ].filter(Boolean);
   for (const url of urls) {
     try {
-      const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
+      const res = await fetchWithTimeout(url, { headers: { Accept: 'application/json' } });
       if (!res.ok) continue;
       const ct = res.headers.get('content-type') || '';
       if (!ct.includes('application/json')) continue;
       const data = await res.json();
       if (data.platforms || data.focus || data.stationBoard) {
-        render(applyDisplay(data, displaysDoc));
+        acceptBoardPayload(data, displaysDoc);
         return;
       }
     } catch {
-      /* next */
+      /* next url */
     }
   }
-  $('board').innerHTML = `<div class="idle">Unable to load: no board cache for ${esc(station)}</div>`;
+  setLinkDown(true);
+  if (!lastPayload && !licenceExpired) {
+    $('board').innerHTML = `<div class="idle">${esc(t('linkDownTitle'))}</div>`;
+  }
 }
 
 if ($('bootLoading')) $('bootLoading').textContent = t('loading');
@@ -1330,9 +1509,24 @@ setInterval(updateClock, 1000);
 setInterval(() => {
   if (sessionStopped) return;
   langIndex = (langIndex + 1) % languages.length;
+  if (licenceExpired) {
+    paintLicenceExpiredOverlay(lastLicenceView);
+    updateClock();
+    return;
+  }
+  if (linkDown) {
+    paintLinkDownOverlay();
+    updateClock();
+    return;
+  }
+  if (lastLicenceView) applyLicenceUi(lastLicenceView);
   if (lastPayload) render(lastPayload);
   else updateClock();
 }, LANG_MS);
+
+window.addEventListener('offline', () => setLinkDown(true));
+window.addEventListener('online', () => loadBoard());
+if (typeof navigator !== 'undefined' && navigator.onLine === false) setLinkDown(true);
 
 Promise.all([loadTypes(), loadLayout(), loadStations(), loadDisplaysDoc()]).then(loadBoard);
 setInterval(loadBoard, REFRESH_MS);

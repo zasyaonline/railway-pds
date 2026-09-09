@@ -6,6 +6,15 @@ const path = require('path');
 const { buildCoachBoard } = require('../services/boardBuilder');
 const { fetchLiveStationBoard } = require('../services/liveBoardService');
 const { resolveStationFromNtes } = require('../../services/ntesClient');
+const { isAppliance } = require('../../edge/runtime/mode');
+const { requireAdmin: requireEdgeAdmin, loadAdminSecret } = require('../../edge/admin/auth');
+const { readJson: readRuntimeJson } = require('../../edge/storage/atomic-file');
+const { ntesStatePath } = require('../../shared/paths');
+const { loadStationDocument } = require('../../edge/overlay/load');
+const { evaluateFromDisk, publicLicenceView } = require('../../edge/licence/licence-service');
+const { loadConfig } = require('../../edge/config/config-service');
+const { createLogger } = require('../../shared/logging');
+const coachLog = createLogger('coach');
 const {
   DEFAULT_STATION,
   INDEX_REL,
@@ -29,6 +38,7 @@ const {
 function createApiRouter(deps) {
   const router = express.Router();
   const { dataDir, adminKey } = deps;
+  const pinnedStation = typeof deps.pinnedStation === 'function' ? deps.pinnedStation : () => null;
 
   function readJson(name, fallback) {
     try {
@@ -75,7 +85,43 @@ function createApiRouter(deps) {
     return true;
   }
 
+  function resolveCode(requested) {
+    const pinned = pinnedStation();
+    if (pinned) return normalizeStation(pinned);
+    return normalizeStation(requested);
+  }
+
+  function currentLicence() {
+    if (!isAppliance()) return { operational: true, blocked: false, state: 'VALID' };
+    const cfg = loadConfig().config || {};
+    return evaluateFromDisk({
+      stationCode: cfg.stationCode,
+      gracePeriodHours: cfg.licence?.gracePeriodHours,
+      expiringWarningDays: cfg.licence?.expiringWarningDays,
+      persist: false
+    });
+  }
+
+  function licenceGate(res) {
+    const evaluation = currentLicence();
+    if (evaluation.blocked || evaluation.operational === false) {
+      const view = publicLicenceView(evaluation);
+      res.status(503).json({
+        error: 'licence_blocked',
+        state: evaluation.state,
+        validUntil: view?.validUntil || null,
+        daysLeft: view?.daysLeft ?? 0,
+        message: evaluation.reason || 'Licence expired'
+      });
+      return false;
+    }
+    return true;
+  }
+
   function requireAdmin(req, res) {
+    if (isAppliance() || loadAdminSecret()) {
+      return requireEdgeAdmin(req, res, coachLog);
+    }
     const key = process.env.ADMIN_KEY || adminKey || 'coach-ops';
     const provided = req.get('x-admin-key') || req.query.adminKey || req.query.key || '';
     if (!provided || provided !== key) {
@@ -86,14 +132,28 @@ function createApiRouter(deps) {
   }
 
   function loadDisplaysDoc(code) {
+    const merged = loadStationDocument({
+      dataDir,
+      stationCode: code,
+      fileName: 'displays.json'
+    });
+    if (merged) return merged;
     const rel = stationRel(code);
-    const per = readJson(rel.displays, null);
-    if (per) return per;
     if (rel.code === DEFAULT_STATION) {
       const legacy = readJson(LEGACY_DISPLAYS, null);
       if (legacy) return legacy;
     }
     return emptyDisplaysDoc(rel.code);
+  }
+
+  function loadLayoutDoc(code) {
+    return (
+      loadStationDocument({
+        dataDir,
+        stationCode: code,
+        fileName: 'layout.json'
+      }) || readJson('station_layout.json', null)
+    );
   }
 
   function saveDisplaysDoc(doc) {
@@ -120,23 +180,38 @@ function createApiRouter(deps) {
 
   router.get('/coach-board', async (req, res) => {
     if (!registerViewer(req, res)) return;
-    const code = normalizeStation(req.query.station);
+    if (!licenceGate(res)) return;
+    const code = resolveCode(req.query.station);
     const displaysDoc = withDefaultDisplay(loadDisplaysDoc(code));
     displaysDoc.stationCode = code;
     const typesDoc = readJson('coach_types.json', { types: {}, codeRules: [] });
     const displayId = req.query.display || displaysDoc.displays?.[0]?.id;
-    const stationLayout =
-      readJson(stationRel(code).layout, null) || readJson('station_layout.json', null);
+    const stationLayout = loadLayoutDoc(code);
     const hours = displaysDoc.lookAheadHours || Number(process.env.COACH_LOOKAHEAD_HOURS) || 4;
 
     let live;
-    try {
-      live = await fetchLiveStationBoard(code, { lookAheadHours: hours });
-    } catch (err) {
-      return res.status(502).json({
-        error: 'ntes_live_unavailable',
-        message: err.message || 'Failed to fetch NTES live station board'
-      });
+    if (isAppliance()) {
+      const state = readRuntimeJson(ntesStatePath(), null);
+      if (!state) {
+        return res.status(503).json({
+          error: 'ntes_state_unavailable',
+          message: 'Waiting for NTES runtime state'
+        });
+      }
+      live = {
+        stationName: state.stationName,
+        trains: state.trains || [],
+        fetchedAt: state.fetchedAt
+      };
+    } else {
+      try {
+        live = await fetchLiveStationBoard(code, { lookAheadHours: hours });
+      } catch (err) {
+        return res.status(502).json({
+          error: 'ntes_live_unavailable',
+          message: err.message || 'Failed to fetch NTES live station board'
+        });
+      }
     }
 
     if (live.stationName && (!displaysDoc.stationName || displaysDoc.stationName === displaysDoc.stationCode)) {
@@ -155,6 +230,7 @@ function createApiRouter(deps) {
     if (result.error) return res.status(result.status || 500).json(result);
     result.body.liveFetchedAt = live.fetchedAt;
     result.body.liveTrainCount = live.trains.length;
+    result.body.licence = publicLicenceView(currentLicence());
     writeJson(stationRel(code).board, result.body);
     res.set('Cache-Control', 'no-store');
     res.json(result.body);
@@ -198,24 +274,28 @@ function createApiRouter(deps) {
 
   async function handleGetDisplays(req, res) {
     if (!requireAdmin(req, res)) return;
-    const code = normalizeStation(req.query.station || req.query.stationCode);
+    const code = resolveCode(req.query.station || req.query.stationCode);
     res.json(loadDisplaysDoc(code));
   }
 
   async function handleSaveDisplays(req, res) {
     if (!requireAdmin(req, res)) return;
     const body = req.body || {};
-    const code = normalizeStation(
+    const code = resolveCode(
       body.stationCode || req.query.station || req.query.stationCode
     );
     const doc = withDefaultDisplay(loadDisplaysDoc(code));
     doc.stationCode = code;
 
-    if (body.stationCode || body.stationName) {
+    if (!isAppliance() && (body.stationCode || body.stationName)) {
       const resolved = await resolveStationName(code, body.stationName);
       if (!resolved.ok) return res.status(400).json({ error: resolved.error });
       doc.stationCode = resolved.stationCode;
       doc.stationName = resolved.stationName;
+    } else if (isAppliance()) {
+      const cfg = loadConfig().config || {};
+      doc.stationCode = code;
+      if (cfg.stationName) doc.stationName = cfg.stationName;
     }
     if (typeof body.bogieLengthMeters === 'number') doc.bogieLengthMeters = body.bogieLengthMeters;
     if (typeof body.showBeforeMinutes === 'number') doc.showBeforeMinutes = body.showBeforeMinutes;
@@ -287,7 +367,7 @@ function createApiRouter(deps) {
   });
 
   router.get('/coach/board', (req, res) => {
-    const code = normalizeStation(req.query.station);
+    const code = resolveCode(req.query.station);
     const rel = stationRel(code);
     const board =
       readJson(rel.board, null) ||

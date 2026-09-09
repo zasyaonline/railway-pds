@@ -1,0 +1,8 @@
+{
+  "note": "Example overlay. Copy to /etc/zasya/railway/overlays/BG/announcements.json on the appliance.",
+  "delay": {
+    "minMinutes": 15,
+    "mode": "first_then_step",
+    "stepMinutes": 15
+  }
+}

@@ -7,7 +7,11 @@
 
 const { encryptPayload, decryptPayload } = require('./ntesCrypto');
 
-const BASE_URL = 'https://enquiry.indianrail.gov.in/crisns/AppServAnd';
+const DEFAULT_BASE_URL = 'https://enquiry.indianrail.gov.in/crisns/AppServAnd';
+
+function ntesBaseUrl() {
+  return process.env.NTES_BASE_URL || DEFAULT_BASE_URL;
+}
 const USER_AGENT = 'Dalvik/2.1.0 (Linux; Android 11)';
 
 async function ntesRequest(payloadStr, retries = 2) {
@@ -15,7 +19,7 @@ async function ntesRequest(payloadStr, retries = 2) {
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const response = await fetch(BASE_URL, {
+      const response = await fetch(ntesBaseUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -120,5 +124,7 @@ module.exports = {
   fetchStationLive,
   fetchTrainRunning,
   resolveStationFromNtes,
-  ntesRequest
+  ntesRequest,
+  ntesBaseUrl,
+  DEFAULT_BASE_URL
 };

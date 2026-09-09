@@ -1,6 +1,11 @@
-/* NTES-style light coach chart. Loaded with the TV stylesheet. */
+/* NTES-style light coach chart. Loaded with the TV stylesheet.
+   Keep html.theme-chart and body.theme-chart as their own rules.
+   Older Chromium drops an entire rule if :has() is unsupported, which
+   left this page on the dark TV background (#070f1c). */
+html.theme-chart {
+  background: #eef0f5;
+}
 
-html:has(body.theme-chart),
 body.theme-chart {
   background: #eef0f5;
   color: #1f2937;
@@ -76,6 +81,12 @@ body.theme-chart .rake-stage {
 body.theme-chart .focus-kicker { color: #1d4ed8; }
 body.theme-chart .focus-id { color: #111827; }
 body.theme-chart .focus-id strong { color: #1d4ed8; }
+body.theme-chart .focus-when { color: #111827; }
+body.theme-chart .focus-when small { color: #1d4ed8; }
+body.theme-chart .focus-delay {
+  background: #fecaca;
+  color: #991b1b;
+}
 body.theme-chart .focus-meta .pill {
   background: #1d4ed8;
   color: #fff;
@@ -141,11 +152,13 @@ body.theme-chart .coach-art {
 }
 
 body.theme-chart .coach .code {
-  background: none;
-  color: #111827;
-  font-size: clamp(0.62rem, calc(88vw / var(--coach-count) / 7.2), 1.05rem);
+  color: #1a1305;
+  background: #fde047;
+  font-size: clamp(0.8rem, calc(88vw / var(--coach-count) / 4.2), 1.4rem);
   font-weight: 800;
-  padding: 0;
+  padding: 0.1rem 0.28rem;
+  border-radius: 5px;
+  box-shadow: 0 0 0 1.5px #facc15, 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
 body.theme-chart .coach .kind { display: none; }
@@ -228,7 +241,12 @@ body.theme-chart .amenity-access-badge {
 }
 
 body.theme-chart .fob-bridge-art {
-  opacity: 0.75;
+  opacity: 1;
+}
+
+body.theme-chart .fob-bridge-label {
+  color: #111827;
+  text-shadow: none;
 }
 
 body.theme-chart .walk-cell { border-left-color: rgba(148, 163, 184, 0.25); }

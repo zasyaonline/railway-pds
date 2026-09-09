@@ -30,13 +30,20 @@ const {
   clearAllOverrides
 } = require('../services/platformOverrides');
 
+const { isAppliance } = require('../edge/runtime/mode');
+const { requireAdmin: requireEdgeAdmin, loadAdminSecret } = require('../edge/admin/auth');
+const { createLogger } = require('../shared/logging');
+const { publicLicenceView } = require('../edge/licence/licence-service');
+const adminLog = createLogger('platform');
+
 function createApiRouter(deps) {
   const router = express.Router();
   const { getCache, startRefresh, stopRefresh, saveConfig } = deps;
   const dataDir = path.join(__dirname, '..', 'data');
-  const sessionsPath = path.join(dataDir, 'sessions.json');
-  const overridesPath = path.join(dataDir, 'platform_overrides.json');
-  const adminKey = process.env.ADMIN_KEY || 'chz-ops';
+  const sessionsPath = deps.sessionsPath || path.join(dataDir, 'sessions.json');
+  const overridesPath = deps.overridesPath || path.join(dataDir, 'platform_overrides.json');
+  const adminKey = process.env.ADMIN_KEY || (isAppliance() || loadAdminSecret() ? null : 'chz-ops');
+  const getLicence = deps.getLicence || (() => ({ operational: true, blocked: false }));
 
   function readSessions() {
     try {
@@ -47,7 +54,12 @@ function createApiRouter(deps) {
   }
 
   function writeSessions(store) {
-    fs.writeFileSync(sessionsPath, JSON.stringify(store, null, 2));
+    try {
+      fs.mkdirSync(path.dirname(sessionsPath), { recursive: true });
+      fs.writeFileSync(sessionsPath, JSON.stringify(store, null, 2));
+    } catch (err) {
+      adminLog.warn('session write failed', { error: err.message, sessionsPath });
+    }
   }
 
   function readOverrides() {
@@ -72,6 +84,9 @@ function createApiRouter(deps) {
   }
 
   function requireAdmin(req, res) {
+    if (isAppliance() || loadAdminSecret()) {
+      return requireEdgeAdmin(req, res, adminLog);
+    }
     const provided = req.get('x-admin-key') || req.query.adminKey || req.query.key || '';
     if (!provided || provided !== adminKey) {
       res.status(401).json({ error: 'Admin key required' });
@@ -105,6 +120,18 @@ function createApiRouter(deps) {
   router.get('/trains', (req, res) => {
     if (!registerViewer(req, res)) return;
 
+    const licence = getLicence();
+    const licenceView = publicLicenceView(licence);
+    if (licence.blocked || licence.operational === false) {
+      return res.status(503).json({
+        error: 'licence_blocked',
+        state: licence.state,
+        validUntil: licenceView?.validUntil || null,
+        daysLeft: licenceView?.daysLeft ?? 0,
+        message: licence.reason || 'Licence expired'
+      });
+    }
+
     const cache = getCache();
     if (!cache.boardTrains) {
       return res.status(503).json({ error: 'Data not yet loaded' });
@@ -130,7 +157,9 @@ function createApiRouter(deps) {
       pageIntervalSeconds: cache.config.pageIntervalSeconds ?? 10,
       languageRotateSeconds: cache.config.languageRotateSeconds ?? 10,
       languages: cache.config.languages || ['en', 'te', 'hi'],
-      source: 'NTES Live Station',
+      source: cache.sourceStatus === 'stale' ? 'NTES Live Station (stale)' : 'NTES Live Station',
+      sourceStatus: cache.sourceStatus || 'fresh',
+      licence: licenceView,
       trains
     });
   });
@@ -208,12 +237,19 @@ function createApiRouter(deps) {
       stationCode: cache.config.stationCode || 'CHZ',
       stationName: cache.config.stationName || 'Charlapalli',
       stationPresets: presetsFromMaster(stations),
-      stationNames: stationLocales(cache.config.stationCode, cache.config.stationName)
+      stationNames: stationLocales(cache.config.stationCode, cache.config.stationName),
+      stationPinned: Boolean(isAppliance() || (deps.pinnedStation && deps.pinnedStation()))
     });
   });
 
   router.post('/admin/station', async (req, res) => {
     if (!requireAdmin(req, res)) return;
+    if (isAppliance() || (deps.pinnedStation && deps.pinnedStation())) {
+      return res.status(403).json({
+        error: 'station_pinned',
+        message: 'Station identity is set at installation and cannot be changed at runtime'
+      });
+    }
     const code = normalizeStationCode(req.body?.stationCode);
     const ntes = await resolveStationFromNtes(code);
     if (!ntes.ok) {
@@ -281,7 +317,12 @@ function createApiRouter(deps) {
         ntesPlatform: t.ntesPlatform || t.platform,
         platform: t.platform,
         platformOverridden: Boolean(t.platformOverridden),
-        status: t.status
+        status: t.status,
+        delay: t.delay,
+        runningState: t.runningState,
+        expectedArrival: t.expectedArrival,
+        expectedDeparture: t.expectedDeparture,
+        scheduledArrival: t.scheduledArrival
       })),
       overrides: overrides.overrides || {}
     });

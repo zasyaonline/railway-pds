@@ -116,6 +116,19 @@ body.theme-premium .focus-id span {
   font-weight: 600;
 }
 
+body.theme-premium .focus-when {
+  color: #f8fafc;
+}
+
+body.theme-premium .focus-when small {
+  color: #7dd3fc;
+}
+
+body.theme-premium .focus-delay {
+  background: #fb7185;
+  color: #1a0a0c;
+}
+
 body.theme-premium .focus-meta .pill {
   background: var(--p-highlight);
   color: #081b33;
@@ -193,6 +206,12 @@ body.theme-premium .coach {
   --tile-fs: clamp(0.45rem, calc(96vw / var(--coach-count) / 6.8), 1.05rem);
 }
 
+body.theme-premium .coach.coach-empty {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
 body.theme-premium .coach .num {
   position: absolute;
   top: 0.08rem;
@@ -215,14 +234,18 @@ body.theme-premium .coach-art {
 }
 
 body.theme-premium .coach .code {
-  background: rgba(8, 16, 32, 0.92);
-  border-radius: 4px;
+  color: #1a1305;
+  background: #fde047;
+  border-radius: 5px;
   font-weight: 800;
+  font-size: clamp(0.78rem, calc(96vw / var(--coach-count) / 4.4), 1.45rem);
+  box-shadow: 0 0 0 1.5px #facc15, 0 1px 5px rgba(0, 0, 0, 0.45);
 }
 
 body.theme-premium .coach .kind {
-  color: var(--p-muted);
-  font-size: clamp(0.38rem, calc(var(--tile-fs) * 0.7), 0.7rem);
+  color: #1f2937;
+  background: #fef08a;
+  font-size: clamp(0.58rem, calc(var(--tile-fs) * 0.95), 0.95rem);
 }
 
 body.theme-premium .coach.pin-aligned {
@@ -337,9 +360,7 @@ body.theme-premium .platform-wayfind {
 }
 
 body.theme-premium .walk-strip {
-  flex-shrink: 0;
-  /* Match current TV glyph metrics (Inter is wider when rotated). */
-  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  display: none;
 }
 
 body.theme-premium .walk-cell {
@@ -476,15 +497,23 @@ body.theme-premium .amenity-access-badge {
 body.theme-premium .fob-bridge-overlay {
   top: auto;
   bottom: 0.1rem;
-  width: min(15%, 180px);
-  height: min(40%, 145px);
+  width: min(13%, 150px);
+  height: auto;
   z-index: 7;
-  filter: drop-shadow(0 0 10px rgba(0, 174, 239, 0.22));
+  filter: none;
 }
 
 body.theme-premium .fob-bridge-art {
-  opacity: 0.8;
-  object-position: left bottom;
+  opacity: 1;
+  object-position: center bottom;
+  width: min(76px, 100%);
+  height: min(90px, 18vh);
+}
+
+body.theme-premium .fob-bridge-label {
+  color: #ffffff;
+  text-transform: none;
+  letter-spacing: 0.01em;
 }
 
 body.theme-premium .walk-strip,
