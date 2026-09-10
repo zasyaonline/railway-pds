@@ -258,8 +258,8 @@ write_config() {
 }
 
 enable_services() {
-  note "==> Timezone and NTP (Asia/Kolkata, UTC+5:30)"
-  bash "$SOURCE/deployment/ubuntu/time-sync.sh" || fail "time-sync (chrony / Asia/Kolkata)"
+  note "==> Timezone and NTP (Asia/Kolkata, UTC+5:30; fail if offset >2s)"
+  TIME_SYNC_REQUIRED=1 bash "$SOURCE/deployment/ubuntu/time-sync.sh" || fail "time-sync (chrony / Asia/Kolkata)"
 
   note "==> Services"
   export RAILWAY_ALLOW_SSH="${RAILWAY_ALLOW_SSH:-1}"
@@ -267,9 +267,11 @@ enable_services() {
   bash "$ROOT/deployment/ubuntu/ssh.sh" || true
   nginx -t || fail "nginx config"
   systemctl enable nginx zasya-railway.target \
+    zasya-railway-time-sync.service \
     zasya-railway-ntes.service zasya-railway-platform.service \
     zasya-railway-coach.service zasya-railway-admin.service \
     zasya-railway-display.service zasya-railway-kiosk.service
+  systemctl start zasya-railway-time-sync.service || fail "time-sync unit not active"
   systemctl restart nginx
   systemctl restart zasya-railway-ntes.service zasya-railway-platform.service \
     zasya-railway-coach.service zasya-railway-admin.service

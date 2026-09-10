@@ -260,20 +260,36 @@ cmd_firewall() {
 }
 
 cmd_timesync() {
+  local tz tracking offset max_off ts unit_state
+  max_off="${ZASYA_MAX_CLOCK_OFFSET_SEC:-2}"
   timedatectl >/dev/null || fail "timedatectl failed"
-  local tz
   tz=$(timedatectl show -p Timezone --value 2>/dev/null || true)
   [[ "$tz" == "Asia/Kolkata" ]] || fail "timezone is '${tz:-unknown}', expected Asia/Kolkata (UTC+5:30)"
   systemctl is-active --quiet chrony || systemctl is-active --quiet chronyd || fail "chrony is not active"
-  if command -v chronyc >/dev/null 2>&1; then
-    if ! chronyc tracking 2>/dev/null | grep -qiE 'Leap status[[:space:]]*:[[:space:]]*Normal'; then
-      echo "WARN: chrony not yet Leap Normal (NTP may still be catching up)"
-    fi
-  fi
-  local ts
+  [[ -f /etc/chrony/conf.d/zasya-india.conf ]] || fail "chrony zasya-india.conf missing"
+  grep -qE 'makestep[[:space:]]+1\.0[[:space:]]+-1' /etc/chrony/conf.d/zasya-india.conf \
+    || fail "chrony must use 'makestep 1.0 -1' so UTM/VM pause drift is stepped, not slewed"
+  systemctl is-enabled --quiet zasya-railway-time-sync.service \
+    || fail "zasya-railway-time-sync.service is not enabled (boot NTP step)"
+  unit_state=$(systemctl is-active zasya-railway-time-sync.service 2>/dev/null || true)
+  [[ "$unit_state" == "active" ]] || fail "zasya-railway-time-sync.service is '${unit_state:-unknown}', expected active"
+  command -v chronyc >/dev/null 2>&1 || fail "chronyc missing"
+  tracking=$(chronyc tracking 2>/dev/null || true)
+  [[ -n "$tracking" ]] || fail "chronyc tracking failed"
+  echo "$tracking" | grep -qiE 'Leap status[[:space:]]*:[[:space:]]*Normal' \
+    || fail "chrony Leap status is not Normal"
+  offset=$(echo "$tracking" | awk '
+    /System time/ {
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ /^[0-9]/) { print $i + 0; exit }
+      }
+    }')
+  [[ -n "$offset" ]] || fail "could not parse chrony System time offset"
+  awk -v n="$offset" -v max="$max_off" 'BEGIN { exit (n > max + 0) ? 1 : 0 }' \
+    || fail "clock is ${offset}s off NTP (max ${max_off}s). Run: sudo /usr/local/sbin/zasya-railway-time-sync"
   ts=$(health_json | json_get timeSync)
-  [[ "$ts" != "invalid" ]] || fail "health reports invalid clock"
-  pass "time synchronization Asia/Kolkata via chrony ($ts)"
+  [[ "$ts" == "healthy" ]] || fail "health timeSync is '${ts:-missing}', expected healthy"
+  pass "time synchronization Asia/Kolkata via chrony (offset ${offset}s, $ts)"
 }
 
 cmd_logs() {

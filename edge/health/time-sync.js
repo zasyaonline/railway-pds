@@ -3,6 +3,13 @@
 const { execFileSync } = require('child_process');
 const { isObviouslyInvalidDate, nowIso } = require('../../shared/time');
 
+const DEFAULT_MAX_OFFSET_SEC = 2;
+
+function maxOffsetSec() {
+  const n = Number(process.env.ZASYA_MAX_CLOCK_OFFSET_SEC);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_MAX_OFFSET_SEC;
+}
+
 function run(cmd, args) {
   try {
     return execFileSync(cmd, args, { encoding: 'utf8', timeout: 2000 }).trim();
@@ -11,16 +18,27 @@ function run(cmd, args) {
   }
 }
 
-function parseChronyTracking(text) {
-  if (!text) return { ok: false, lastTimeSync: null };
-  const ok = /Leap status\s*:\s*Normal/i.test(text);
+function parseChronyOffsetSeconds(text) {
+  if (!text) return null;
+  const m = /System time\s*:\s*([0-9.]+)\s+seconds\s+(slow|fast)/i.exec(text);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseChronyTracking(text, maxOffset = maxOffsetSec()) {
+  if (!text) return { ok: false, lastTimeSync: null, offsetSeconds: null, leapOk: false };
+  const leapOk = /Leap status\s*:\s*Normal/i.test(text);
+  const offsetSeconds = parseChronyOffsetSeconds(text);
+  const offsetOk = offsetSeconds != null && offsetSeconds <= maxOffset;
+  const ok = leapOk && offsetOk;
   let lastTimeSync = null;
   const ref = /Ref time \(UTC\)\s*:\s*(.+)/i.exec(text);
   if (ref && ref[1] && !/unspecified/i.test(ref[1])) {
-    const parsed = new Date(ref[1].trim());
+    const parsed = new Date(`${ref[1].trim()} UTC`);
     if (!Number.isNaN(parsed.getTime())) lastTimeSync = parsed.toISOString();
   }
-  return { ok, lastTimeSync };
+  return { ok, lastTimeSync, offsetSeconds, leapOk };
 }
 
 function parseTimezone(timedatectlShow) {
@@ -36,6 +54,7 @@ function readTimeSync() {
   const clockAbnormal = isObviouslyInvalidDate(new Date());
   let lastTimeSync = null;
   let timeSyncStatus = 'unknown';
+  let clockOffsetSeconds = null;
 
   const timezone =
     run('timedatectl', ['show', '-p', 'Timezone', '--value']) ||
@@ -43,14 +62,20 @@ function readTimeSync() {
     null;
 
   /* Chrony is the appliance NTP client. timedatectl NTPSynchronized often stays
-     "no" while chrony Leap status is Normal — treat chrony as source of truth. */
+     "no" while chrony Leap status is Normal — treat chrony as source of truth.
+     Leap Normal alone is not enough: after a VM pause chrony may slew a
+     multi-hour offset and still report Normal. */
   const chronyc = run('chronyc', ['tracking']);
   const chrony = parseChronyTracking(chronyc);
-  if (chrony.ok) {
-    timeSyncStatus = 'healthy';
-    lastTimeSync = chrony.lastTimeSync;
-  } else if (chronyc) {
-    timeSyncStatus = 'degraded';
+  clockOffsetSeconds = chrony.offsetSeconds;
+  if (chronyc) {
+    if (chrony.ok) {
+      timeSyncStatus = 'healthy';
+      lastTimeSync = chrony.lastTimeSync;
+    } else {
+      timeSyncStatus = 'degraded';
+      lastTimeSync = chrony.lastTimeSync;
+    }
   }
 
   const timedatectl = run('timedatectl', ['show', '-p', 'NTPSynchronized', '-p', 'LastSynchronizationTimestamp']);
@@ -61,7 +86,7 @@ function readTimeSync() {
       const parsed = new Date(last[1]);
       if (!Number.isNaN(parsed.getTime())) lastTimeSync = parsed.toISOString();
     }
-    if (timeSyncStatus !== 'healthy' && ntp && ntp[1].toLowerCase() === 'yes') {
+    if (!chronyc && ntp && ntp[1].toLowerCase() === 'yes') {
       timeSyncStatus = 'healthy';
     }
   }
@@ -74,8 +99,14 @@ function readTimeSync() {
     lastTimeSync,
     timeSyncStatus,
     clockAbnormal,
+    clockOffsetSeconds,
     timezone
   };
 }
 
-module.exports = { readTimeSync, parseChronyTracking, parseTimezone };
+module.exports = {
+  readTimeSync,
+  parseChronyTracking,
+  parseChronyOffsetSeconds,
+  parseTimezone
+};

@@ -1,0 +1,16 @@
+[Unit]
+Description=Zasya Railway time sync (Asia/Kolkata + NTP step)
+After=network-online.target chrony.service chronyd.service
+Wants=network-online.target
+Before=zasya-railway-ntes.service zasya-railway-platform.service zasya-railway-coach.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=90
+ExecStart=/usr/local/sbin/zasya-railway-time-sync
+Environment=TIME_SYNC_REQUIRED=0
+Environment=ZASYA_TIME_SYNC_WAIT_SEC=60
+
+[Install]
+WantedBy=zasya-railway.target

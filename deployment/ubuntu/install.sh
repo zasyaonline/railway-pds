@@ -69,6 +69,10 @@ bash "${SOURCE}/deployment/scripts/railway-setup" \
 echo "==> Piper TTS voices (EN/HI/TE); skip if offline"
 bash "${SOURCE}/deployment/ubuntu/install-piper.sh" || true
 
+echo "==> Clock / NTP (install fails if timezone is not IST or offset is >2s)"
+TIME_SYNC_REQUIRED=1 /usr/local/sbin/zasya-railway-time-sync
+/usr/local/sbin/railway-acceptance timesync
+
 echo "==> Acceptance (HTTP on :80)"
 /usr/local/sbin/railway-acceptance urls
 /usr/local/sbin/railway-acceptance services

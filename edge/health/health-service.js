@@ -93,6 +93,7 @@ function collectHealth(options = {}) {
     timeSync: time.timeSyncStatus,
     systemTime: time.systemTime,
     lastTimeSync: time.lastTimeSync,
+    clockOffsetSeconds: time.clockOffsetSeconds ?? null,
     timezone: time.timezone || null,
     sourceStatus: freshness?.sourceStatus || null,
     dataUpdatedAt: freshness?.dataUpdatedAt || null,

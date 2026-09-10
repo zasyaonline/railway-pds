@@ -7,6 +7,7 @@ export NEEDRESTART_MODE=l
 apt-get update
 apt-get install -y --no-install-recommends \
   ca-certificates curl git gnupg nginx ufw openssh-server chrony rsync \
+  util-linux \
   xserver-xorg xinit openbox dbus-x11 xvfb snapd \
   logrotate dnsutils iproute2 openssl espeak-ng sox alsa-utils
 
@@ -64,4 +65,5 @@ systemctl enable chrony nginx
 systemctl disable --now bluetooth cups avahi-daemon 2>/dev/null || true
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-bash "${SCRIPT_DIR}/time-sync.sh"
+# Configure chrony now; railway-setup / install.sh wait and fail if NTP never locks.
+ZASYA_TIME_SYNC_WAIT_SEC=20 bash "${SCRIPT_DIR}/time-sync.sh"
