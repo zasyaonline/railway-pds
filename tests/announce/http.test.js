@@ -61,6 +61,40 @@ test('manual announcement queues without crashing if TTS is missing', async () =
   server.close();
 });
 
+test('settings GET and PUT require admin and persist overlay', async () => {
+  const server = await listen(createAdminApp());
+  const { port } = server.address();
+  const denied = await fetch(`http://127.0.0.1:${port}/api/admin/announcements/settings`);
+  assert.equal(denied.status, 401);
+  const got = await fetch(`http://127.0.0.1:${port}/api/admin/announcements/settings`, {
+    headers: { 'X-Admin-Key': 'test-admin-secret' }
+  });
+  assert.equal(got.status, 200);
+  const body = await got.json();
+  assert.equal(body.settings.staleNtes, 'stop');
+  assert.deepEqual(body.settings.languageOrder, ['te', 'en', 'hi']);
+  const put = await fetch(`http://127.0.0.1:${port}/api/admin/announcements/settings`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Admin-Key': 'test-admin-secret'
+    },
+    body: JSON.stringify({ settings: { delay: { minMinutes: 25 } } })
+  });
+  assert.equal(put.status, 200);
+  const saved = await put.json();
+  assert.equal(saved.settings.delay.minMinutes, 25);
+  await fetch(`http://127.0.0.1:${port}/api/admin/announcements/settings/reset`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Admin-Key': 'test-admin-secret'
+    },
+    body: '{}'
+  });
+  server.close();
+});
+
 test('manual announcement infers type from delay when type is omitted', async () => {
   const server = await listen(createAdminApp());
   const { port } = server.address();

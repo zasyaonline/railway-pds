@@ -19,6 +19,9 @@ function appendHistory(entry, retention = 200) {
     source: entry.source || 'auto',
     ok: entry.ok !== false,
     error: entry.error || null,
+    extra: entry.extra || null,
+    transcript: entry.transcript || null,
+    mode: entry.mode || entry.source || 'auto',
     wavs: entry.wavs || []
   });
   if (doc.events.length > retention) {

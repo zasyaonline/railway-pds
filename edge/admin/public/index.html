@@ -7,7 +7,7 @@
   <link rel="icon" href="/platform/img/favicon.png" type="image/png" sizes="64x64">
   <link rel="icon" href="/platform/img/ir-logo.png" type="image/png">
   <link rel="stylesheet" href="/platform/css/style.css?v=20260909a">
-  <link rel="stylesheet" href="/platform/css/admin.css?v=20260909a">
+  <link rel="stylesheet" href="/platform/css/admin.css?v=20260912a">
 </head>
 <body class="admin-body">
   <header class="header admin-header">
@@ -114,26 +114,34 @@
       <section class="station-card announce-card">
         <h2>Announcements</h2>
         <p class="station-help">
-          Offline TTS. Templates are test wording until Railway-approved copy arrives.
+          Offline TTS and live microphone go to the appliance PA, not the browser.
           Passenger displays stay up if synthesis or speakers fail.
         </p>
         <p class="station-help" id="announceState">Auto — · Paused — · Queue 0</p>
         <div class="platform-actions">
+          <button type="button" id="btnAnnounceRules" class="btn-refresh btn-start">Announcement rules</button>
           <button type="button" id="btnAnnounceEnable" class="btn-refresh btn-start">Enable auto</button>
           <button type="button" id="btnAnnounceDisable" class="btn-refresh btn-stop">Disable auto</button>
           <button type="button" id="btnAnnouncePause" class="btn-refresh btn-stop">Pause</button>
-          <button type="button" id="btnAnnounceResume" class="btn-refresh btn-start">Resume</button>
+          <button type="button" id="btnAnnounceStop" class="btn-refresh btn-stop">Stop now</button>
+          <button type="button" id="btnAnnounceClear" class="btn-refresh btn-stop">Clear queue</button>
+          <button type="button" id="btnAnnounceResume" class="btn-refresh btn-start">Resume queue</button>
+          <button type="button" id="btnLiveStart" class="btn-refresh btn-start">Start live mic</button>
+          <button type="button" id="btnLiveStop" class="btn-refresh btn-stop">Stop live mic</button>
         </div>
         <div class="station-row">
           <label for="announceType">Type</label>
           <select id="announceType">
             <option value="arriving">Arriving</option>
+            <option value="departing">Departing</option>
             <option value="delayed">Delayed</option>
-            <option value="approaching">Approaching</option>
             <option value="boarding">Boarding</option>
             <option value="platform_changed">Platform changed</option>
             <option value="cancelled">Cancelled</option>
-            <option value="departed">Departed</option>
+            <option value="rescheduled">Rescheduled</option>
+            <option value="special">Special</option>
+            <option value="greeting">Greeting</option>
+            <option value="advisory">Advisory</option>
             <option value="manual">Manual text</option>
           </select>
           <label for="announceTrain">Train</label>
@@ -142,14 +150,12 @@
           <input id="announcePlatform" type="text" maxlength="4" placeholder="2" autocomplete="off">
         </div>
         <div class="station-row">
-          <label for="announceExtra">Extra</label>
+          <label for="announceExtra">Extra / transcript</label>
           <input id="announceExtra" type="text" maxlength="200" placeholder="Optional extra sentence" autocomplete="off">
-          <label for="announceVolume">Vol</label>
-          <input id="announceVolume" type="number" min="0" max="100" value="80">
-          <button type="button" id="btnAnnounceSpeak" class="btn-refresh btn-start">Announce</button>
-          <button type="button" id="btnAnnounceVolume" class="btn-refresh btn-start">Set volume</button>
+          <button type="button" id="btnAnnounceSpeak" class="btn-refresh btn-start">Announce TTS</button>
         </div>
         <p class="station-status" id="announceStatus" hidden></p>
+        <div id="pendingPlatformBox" class="pending-platform" hidden></div>
         <table class="train-table admin-table announce-table">
           <thead>
             <tr>
@@ -205,12 +211,13 @@
           <label for="announceModalType">Type</label>
           <select id="announceModalType">
             <option value="arriving">Arriving</option>
+            <option value="departing">Departing</option>
             <option value="delayed">Delayed</option>
-            <option value="approaching">Approaching</option>
             <option value="boarding">Boarding</option>
             <option value="platform_changed">Platform changed</option>
             <option value="cancelled">Cancelled</option>
-            <option value="departed">Departed</option>
+            <option value="rescheduled">Rescheduled</option>
+            <option value="special">Special</option>
             <option value="manual">Manual text</option>
           </select>
         </div>
@@ -225,9 +232,103 @@
         </div>
       </div>
     </div>
+
+    <div id="announceRulesModal" class="announce-modal" hidden>
+      <div class="announce-modal-card announce-rules-card" role="dialog" aria-modal="true" aria-labelledby="announceRulesTitle">
+        <h3 id="announceRulesTitle">Announcement rules</h3>
+        <p class="station-help" id="announceRulesMeta">Per-station overlay. Central control can read this JSON later.</p>
+        <form id="announceRulesForm" class="announce-rules-form">
+          <fieldset>
+            <legend>Languages (play order)</legend>
+            <label>Order (comma: te,en,hi)</label>
+            <input id="ruleLanguageOrder" type="text" maxlength="20" autocomplete="off">
+          </fieldset>
+          <fieldset>
+            <legend>Arrival (original STA, no delay)</legend>
+            <label>Start minutes before STA</label>
+            <input id="ruleArrivalStart" type="number" min="1" max="180">
+            <label>30–15 interval (min)</label>
+            <input id="ruleWinFar" type="number" min="1" max="60">
+            <label>15–0 interval (min)</label>
+            <input id="ruleWinNear" type="number" min="1" max="60">
+            <label>Short-notice minutes</label>
+            <input id="ruleShortMins" type="number" min="1" max="30">
+            <label>Short-notice count</label>
+            <input id="ruleShortCount" type="number" min="1" max="5">
+          </fieldset>
+          <fieldset>
+            <legend>Delay / departure</legend>
+            <label>Delay at least (min)</label>
+            <input id="ruleDelayMin" type="number" min="0" max="720">
+            <label>Delay repeat</label>
+            <select id="ruleDelayMode">
+              <option value="first_only">Once at threshold</option>
+              <option value="first_then_step">Again every step</option>
+            </select>
+            <label>Delay step (min)</label>
+            <input id="ruleDelayStep" type="number" min="1" max="180">
+            <label>Departing minutes before STD</label>
+            <input id="ruleDepartMins" type="number" min="0" max="120">
+          </fieldset>
+          <fieldset>
+            <legend>NTES and confirms</legend>
+            <label>When NTES is stale</label>
+            <select id="ruleStale">
+              <option value="stop">Stop automatic</option>
+              <option value="last_known">Use last known (not recommended)</option>
+            </select>
+            <label class="rule-check"><input id="rulePfConfirm" type="checkbox"> Platform change needs staff confirm</label>
+            <label class="rule-check"><input id="ruleCancelAuto" type="checkbox"> Auto-announce cancellations</label>
+            <label class="rule-check"><input id="ruleReschedAuto" type="checkbox"> Auto-announce reschedules</label>
+          </fieldset>
+          <fieldset>
+            <legend>Volume (staff cannot change live)</legend>
+            <label>Day start–end / dB</label>
+            <div class="station-row">
+              <input id="ruleDayStart" type="text" maxlength="5" placeholder="06:00">
+              <input id="ruleDayEnd" type="text" maxlength="5" placeholder="18:00">
+              <input id="ruleDayDb" type="number" min="40" max="120">
+            </div>
+            <label>Evening start–end / dB</label>
+            <div class="station-row">
+              <input id="ruleEveStart" type="text" maxlength="5">
+              <input id="ruleEveEnd" type="text" maxlength="5">
+              <input id="ruleEveDb" type="number" min="40" max="120">
+            </div>
+            <label>Night start–end / dB</label>
+            <div class="station-row">
+              <input id="ruleNightStart" type="text" maxlength="5">
+              <input id="ruleNightEnd" type="text" maxlength="5">
+              <input id="ruleNightDb" type="number" min="40" max="120">
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Audio / greetings</legend>
+            <label>Playback device</label>
+            <input id="ruleSink" type="text" maxlength="80" placeholder="default">
+            <label>Capture device</label>
+            <input id="ruleCapture" type="text" maxlength="80" placeholder="default">
+            <label>Advisory idle seconds</label>
+            <input id="ruleIdle" type="number" min="0" max="3600">
+            <label>Advisory clips (JSON array)</label>
+            <textarea id="ruleClips" rows="3" placeholder='[{"id":"g1","type":"greeting","extra":"Welcome to the station"}]'></textarea>
+          </fieldset>
+          <fieldset>
+            <legend>Templates (advanced)</legend>
+            <textarea id="ruleTemplates" rows="6"></textarea>
+          </fieldset>
+        </form>
+        <p class="station-status" id="announceRulesStatus" hidden></p>
+        <div class="announce-modal-actions">
+          <button type="button" id="btnRulesSave" class="btn-refresh btn-start">Save for this station</button>
+          <button type="button" id="btnRulesReset" class="btn-refresh btn-stop">Restore PDF defaults</button>
+          <button type="button" id="btnRulesClose" class="btn-refresh btn-stop">Close</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script src="/platform/config.js?v=20260825b"></script>
-  <script src="admin.js?v=20260909c"></script>
+  <script src="admin.js?v=20260912a"></script>
 </body>
 </html>

@@ -3,114 +3,199 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { defaultAnnouncements } = require('../../edge/announce/defaults');
-const { evaluateBoard, evaluateTrain } = require('../../edge/announce/engine');
+const { evaluateBoard, evaluateTrain, suggestedManualType, arrivalIntervalMinutes } = require('../../edge/announce/engine');
 const { renderAnnouncement, speakDigits } = require('../../edge/announce/normalize');
 
 function cfg(extra) {
   return { ...defaultAnnouncements(), ...extra };
 }
 
+function emptyMemory() {
+  return { done: {}, delayAnnounced: {}, platform: {}, schedule: {}, arrival: {}, pendingPlatform: {} };
+}
+
 test('train numbers are spoken digit by digit', () => {
   assert.match(speakDigits('12723', 'en'), /one two seven two three/);
 });
 
-test('delay announces once then again after step', () => {
+test('language order defaults to Telugu then English then Hindi', () => {
+  assert.deepEqual(defaultAnnouncements().languageOrder, ['te', 'en', 'hi']);
+});
+
+test('delay of 14 minutes does not announce; 15 does', () => {
   const config = cfg();
-  const now = new Date('2026-09-09T12:00:00');
+  const now = new Date('2026-09-12T12:00:00');
+  const base = {
+    trainNo: '12723',
+    platform: '2',
+    runningState: 'scheduled',
+    scheduledArrival: '18:00'
+  };
+  const miss = evaluateTrain({ ...base, delay: 14 }, config, emptyMemory(), now);
+  assert.equal(miss.events.some((e) => e.type === 'delayed'), false);
+  const hit = evaluateTrain({ ...base, delay: 15 }, config, emptyMemory(), now);
+  assert.ok(hit.events.some((e) => e.type === 'delayed'));
+});
+
+test('delay first_only does not repeat; step mode does', () => {
+  const now = new Date('2026-09-12T12:00:00');
   const train = {
     trainNo: '12723',
-    trainName: 'Satavahana Express',
     platform: '2',
     delay: 20,
     runningState: 'scheduled',
-    expectedArrival: '18:00'
+    scheduledArrival: '18:00'
   };
-  const memory = { done: {}, delayAnnounced: {}, platform: {} };
-  const first = evaluateTrain(train, config, memory, now);
-  assert.ok(first.some((e) => e.type === 'delayed'));
+  const once = cfg({ delay: { minMinutes: 15, mode: 'first_only', stepMinutes: 15 } });
+  const memory = emptyMemory();
   memory.delayAnnounced['12723'] = 20;
   memory.done['12723:delayed'] = { at: 'x' };
-  const second = evaluateTrain({ ...train, delay: 25 }, config, memory, now);
-  assert.equal(second.some((e) => e.type === 'delayed'), false);
-  const third = evaluateTrain({ ...train, delay: 35 }, config, memory, now);
-  assert.ok(third.some((e) => e.type === 'delayed'));
+  assert.equal(evaluateTrain({ ...train, delay: 40 }, once, memory, now).events.some((e) => e.type === 'delayed'), false);
+  const stepped = cfg({ delay: { minMinutes: 15, mode: 'first_then_step', stepMinutes: 15 } });
+  assert.ok(evaluateTrain({ ...train, delay: 35 }, stepped, memory, now).events.some((e) => e.type === 'delayed'));
+});
+
+test('arriving cadence uses STA not ETA', () => {
+  const config = cfg();
+  const now = new Date('2026-09-12T17:50:00');
+  const train = {
+    trainNo: '17014',
+    platform: '1',
+    runningState: 'scheduled',
+    delay: 40,
+    scheduledArrival: '18:00',
+    expectedArrival: '18:40'
+  };
+  const { events } = evaluateTrain(train, config, emptyMemory(), now);
+  const arriving = events.find((e) => e.type === 'arriving');
+  assert.ok(arriving);
+  assert.equal(arriving.minutes, 10);
+});
+
+test('exactly 15 minutes before STA uses the 5-minute window', () => {
+  assert.equal(arrivalIntervalMinutes(16, defaultAnnouncements()), 3);
+  assert.equal(arrivalIntervalMinutes(15, defaultAnnouncements()), 5);
+  assert.equal(arrivalIntervalMinutes(0, defaultAnnouncements()), 5);
+  assert.equal(arrivalIntervalMinutes(31, defaultAnnouncements()), null);
+});
+
+test('short-notice train fires twice within the remaining window', () => {
+  const config = cfg();
+  const train = {
+    trainNo: '67763',
+    platform: '1',
+    runningState: 'scheduled',
+    scheduledArrival: '12:04'
+  };
+  const firstNow = new Date('2026-09-12T12:01:00');
+  const firstBoard = evaluateBoard({
+    trains: [train],
+    config,
+    memory: emptyMemory(),
+    now: firstNow,
+    stale: false
+  });
+  assert.equal(firstBoard.events.filter((e) => e.type === 'arriving').length, 1);
+  const tooSoon = evaluateBoard({
+    trains: [train],
+    config,
+    memory: firstBoard.memory,
+    now: new Date('2026-09-12T12:01:20'),
+    stale: false
+  });
+  assert.equal(tooSoon.events.filter((e) => e.type === 'arriving').length, 0);
+  const second = evaluateBoard({
+    trains: [train],
+    config,
+    memory: tooSoon.memory,
+    now: new Date('2026-09-12T12:02:31'),
+    stale: false
+  });
+  assert.equal(second.events.filter((e) => e.type === 'arriving').length, 1);
 });
 
 test('arriving fires when runningState is arrived', () => {
   const config = cfg();
-  const events = evaluateTrain(
-    { trainNo: '1', platform: '1', runningState: 'arrived', delay: 0 },
+  const { events } = evaluateTrain(
+    { trainNo: '1', platform: '1', runningState: 'arrived', delay: 0, scheduledArrival: '11:00' },
     config,
-    { done: {}, delayAnnounced: {}, platform: {} },
-    new Date()
+    emptyMemory(),
+    new Date('2026-09-12T12:00:00')
   );
-  assert.ok(events.some((e) => e.type === 'arriving'));
+  assert.ok(events.some((e) => e.type === 'arriving' && e.atPlatform));
 });
 
 test('stale NTES stop policy yields no auto events', () => {
   const config = cfg({ staleNtes: 'stop' });
   const { events } = evaluateBoard({
-    trains: [{ trainNo: '1', delay: 40, runningState: 'scheduled', platform: '1' }],
+    trains: [{ trainNo: '1', delay: 40, runningState: 'scheduled', platform: '1', scheduledArrival: '18:00' }],
     config,
-    memory: {},
-    now: new Date(),
+    memory: emptyMemory(),
+    now: new Date('2026-09-12T17:50:00'),
     stale: true
   });
   assert.equal(events.length, 0);
 });
 
-test('cancelled is suppressed by default but templates still render', () => {
+test('cancelled auto-announces by default', () => {
   const config = cfg();
-  const events = evaluateTrain(
+  const { events } = evaluateTrain(
     { trainNo: '1', status: 'Cancelled', runningState: 'cancelled', platform: '1' },
     config,
-    { done: {} },
+    emptyMemory(),
     new Date()
   );
-  assert.equal(events.length, 0);
+  assert.ok(events.some((e) => e.type === 'cancelled'));
   const text = renderAnnouncement({
-    type: 'cancelled',
+    type: 'departed',
     lang: 'en',
     config,
-    train: { trainNo: '12723', trainName: 'Satavahana Express' }
+    train: { trainNo: '12723', trainName: 'Satavahana Express', platform: '2' }
   });
-  assert.match(text, /cancelled/i);
+  assert.match(text, /will depart/i);
+  assert.doesNotMatch(text, /has departed/i);
 });
 
 test('suggested manual type follows current train status', () => {
-  const { suggestedManualType } = require('../../edge/announce/engine');
   assert.equal(
     suggestedManualType({ runningState: 'cancelled', status: 'Cancelled' }),
     'cancelled'
   );
-  assert.equal(suggestedManualType({ runningState: 'departed' }), 'departed');
+  assert.equal(suggestedManualType({ runningState: 'departed' }), 'departing');
   assert.equal(suggestedManualType({ runningState: 'arrived' }), 'arriving');
   assert.equal(suggestedManualType({ runningState: 'scheduled', delay: 20, status: 'Late by 20 mins' }), 'delayed');
-  assert.equal(suggestedManualType({ runningState: 'scheduled', delay: 5, status: 'Late by 5 mins' }), 'arriving');
-  assert.equal(
-    suggestedManualType(
-      { runningState: 'scheduled', delay: 0, expectedArrival: '12:10' },
-      new Date('2026-09-09T12:00:00')
-    ),
-    'approaching'
-  );
-  assert.equal(
-    suggestedManualType(
-      { runningState: 'scheduled', delay: 0, expectedArrival: '18:00' },
-      new Date('2026-09-09T12:00:00')
-    ),
-    'arriving'
-  );
 });
 
-test('platform change stays staff-confirm by default', () => {
+test('platform change stays pending until staff confirm', () => {
   const config = cfg();
-  const memory = { done: {}, platform: { '1': '2' } };
-  const events = evaluateTrain(
-    { trainNo: '1', platform: '4', runningState: 'scheduled', delay: 0 },
+  const memory = emptyMemory();
+  memory.platform['1'] = '2';
+  const { events, pending } = evaluateTrain(
+    { trainNo: '1', platform: '4', runningState: 'scheduled', delay: 0, scheduledArrival: '18:00' },
     config,
     memory,
-    new Date()
+    new Date('2026-09-12T12:00:00')
   );
   assert.equal(events.some((e) => e.type === 'platform_changed'), false);
+  assert.equal(pending.length, 1);
+  assert.equal(pending[0].to, '4');
+});
+
+test('reschedule fires when STA changes after first sighting', () => {
+  const config = cfg();
+  const memory = emptyMemory();
+  memory.schedule['1'] = { sta: '18:00', std: '18:05' };
+  const { events } = evaluateTrain(
+    {
+      trainNo: '1',
+      platform: '1',
+      runningState: 'scheduled',
+      scheduledArrival: '19:10',
+      scheduledDeparture: '19:15'
+    },
+    config,
+    memory,
+    new Date('2026-09-12T12:00:00')
+  );
+  assert.ok(events.some((e) => e.type === 'rescheduled'));
 });

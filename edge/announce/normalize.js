@@ -31,7 +31,8 @@ function applyTemplate(template, fields) {
 }
 
 function renderAnnouncement({ type, lang, config, train, extra, minutes }) {
-  const templates = config.templates?.[type] || config.templates?.manual || {};
+  const mapped = type === 'departed' ? 'departing' : type;
+  const templates = config.templates?.[mapped] || config.templates?.[type] || config.templates?.manual || {};
   const template = templates[lang] || templates.en || '';
   const fields = {
     trainNo: speakDigits(train?.trainNo, lang),

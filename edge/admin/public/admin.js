@@ -16,12 +16,18 @@ let announceModalTrain = null;
 
 const ANNOUNCE_TYPE_LABELS = {
   arriving: 'Arriving',
+  departing: 'Departing',
   delayed: 'Delayed',
-  approaching: 'Approaching',
+  approaching: 'Arriving',
   boarding: 'Boarding',
   platform_changed: 'Platform changed',
   cancelled: 'Cancelled',
-  departed: 'Departed',
+  rescheduled: 'Rescheduled',
+  special: 'Special',
+  greeting: 'Greeting',
+  advisory: 'Advisory',
+  departed: 'Departing',
+  live: 'Live mic',
   manual: 'Manual text'
 };
 
@@ -49,11 +55,11 @@ function suggestedAnnounceType(train, now = new Date()) {
   const status = String(train?.status || '');
   const delay = Number(train?.delay || 0);
   if (running === 'cancelled' || /cancel/i.test(status)) return 'cancelled';
-  if (running === 'departed') return 'departed';
+  if (running === 'departed') return 'departing';
   if (running === 'arrived') return 'arriving';
   if (delay >= 15) return 'delayed';
-  const mins = minutesUntilClock(train?.expectedArrival || train?.scheduledArrival, now);
-  if (mins != null && mins >= 0 && mins <= 15) return 'approaching';
+  const mins = minutesUntilClock(train?.scheduledArrival || train?.expectedArrival, now);
+  if (mins != null && mins >= 0 && mins <= 30) return 'arriving';
   return 'arriving';
 }
 
@@ -262,15 +268,48 @@ function setAnnounceStatus(message, isError) {
   el.className = `station-status${isError ? ' error' : ''}`;
 }
 
+function renderPendingPlatform(data) {
+  const box = $('pendingPlatformBox');
+  if (!box) return;
+  const rows = data.pendingPlatform || [];
+  if (!rows.length) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+  box.hidden = false;
+  box.innerHTML = rows.map((row) => `
+    <p>
+      Platform change pending: train ${escapeHtml(row.trainNo)} ${escapeHtml(row.from)} → ${escapeHtml(row.to)}
+      <button type="button" class="btn-refresh btn-start btn-confirm-pf" data-train="${escapeHtml(row.trainNo)}">Confirm and announce</button>
+    </p>
+  `).join('');
+  box.querySelectorAll('.btn-confirm-pf').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      try {
+        const data = await api('/api/admin/announcements/confirm-platform', {
+          method: 'POST',
+          body: JSON.stringify({ trainNo: btn.dataset.train })
+        });
+        renderAnnouncements(data);
+        setAnnounceStatus(`Confirmed platform for ${btn.dataset.train}`);
+      } catch (err) {
+        setAnnounceStatus(err.message, true);
+      }
+    });
+  });
+}
+
 function renderAnnouncements(data) {
   if ($('announceState')) {
     $('announceState').textContent =
-      `Auto ${data.autoEnabled ? 'ON' : 'OFF'} · Paused ${data.paused ? 'YES' : 'no'} · Queue ${data.queueLength || 0}` +
+      `${data.engineState || '—'} · Auto ${data.autoEnabled ? 'ON' : 'OFF'} · Paused ${data.paused ? 'YES' : 'no'} · Queue ${data.queueLength || 0}` +
+      (data.heldLength ? ` · held ${data.heldLength}` : '') +
+      (data.recording ? ' · LIVE MIC' : '') +
+      (data.ntesUnavailable ? ' · NTES unavailable' : '') +
       (data.lastError ? ` · last error: ${data.lastError}` : '');
   }
-  if ($('announceVolume') && data.volume != null && document.activeElement !== $('announceVolume')) {
-    $('announceVolume').value = data.volume;
-  }
+  renderPendingPlatform(data);
   const tbody = $('announceBody');
   if (!tbody) return;
   const rows = data.history || [];
@@ -591,7 +630,8 @@ async function unlock() {
       const active = document.activeElement;
       const editingPf = active && active.classList && active.classList.contains('pf-input');
       const announceOpen = $('announceTrainModal') && !$('announceTrainModal').hidden;
-      if (!editingPf && !announceOpen) {
+      const rulesOpen = $('announceRulesModal') && !$('announceRulesModal').hidden;
+      if (!editingPf && !announceOpen && !rulesOpen) {
         loadPlatforms().catch(() => {});
       }
     }, 5000);
@@ -698,9 +738,37 @@ if ($('btnAnnounceEnable')) {
   $('btnAnnounceDisable').addEventListener('click', () => announceCommand('/api/admin/announcements/auto', { enabled: false }));
   $('btnAnnouncePause').addEventListener('click', () => announceCommand('/api/admin/announcements/pause', { paused: true }));
   $('btnAnnounceResume').addEventListener('click', () => announceCommand('/api/admin/announcements/pause', { paused: false }));
-  $('btnAnnounceVolume').addEventListener('click', () => {
-    announceCommand('/api/admin/announcements/volume', { volume: Number($('announceVolume').value) });
-  });
+  if ($('btnAnnounceStop')) {
+    $('btnAnnounceStop').addEventListener('click', () => announceCommand('/api/admin/announcements/stop', {}));
+  }
+  if ($('btnAnnounceClear')) {
+    $('btnAnnounceClear').addEventListener('click', () => announceCommand('/api/admin/announcements/clear', {}));
+  }
+  if ($('btnLiveStart')) {
+    $('btnLiveStart').addEventListener('click', async () => {
+      try {
+        const data = await api('/api/admin/announcements/live/start', { method: 'POST', body: '{}' });
+        renderAnnouncements(data);
+        setAnnounceStatus(data.recording ? 'Live microphone recording' : 'Live start');
+      } catch (err) {
+        setAnnounceStatus(err.message, true);
+      }
+    });
+  }
+  if ($('btnLiveStop')) {
+    $('btnLiveStop').addEventListener('click', async () => {
+      try {
+        const data = await api('/api/admin/announcements/live/stop', {
+          method: 'POST',
+          body: JSON.stringify({ transcript: $('announceExtra')?.value.trim() || '' })
+        });
+        renderAnnouncements(data);
+        setAnnounceStatus('Live clip queued to PA');
+      } catch (err) {
+        setAnnounceStatus(err.message, true);
+      }
+    });
+  }
   $('btnAnnounceSpeak').addEventListener('click', async () => {
     try {
       const data = await api('/api/admin/announcements/manual', {
@@ -729,6 +797,9 @@ if ($('btnAnnounceModalClose')) {
     if (ev.key === 'Escape' && $('announceTrainModal') && !$('announceTrainModal').hidden) {
       closeAnnounceModal();
     }
+    if (ev.key === 'Escape' && $('announceRulesModal') && !$('announceRulesModal').hidden) {
+      $('announceRulesModal').hidden = true;
+    }
   });
   $('btnAnnounceModalCurrent').addEventListener('click', async () => {
     if (!announceModalTrain) return;
@@ -752,6 +823,146 @@ if ($('btnAnnounceModalClose')) {
       );
     } catch (err) {
       setAnnounceStatus(err.message, true);
+    }
+  });
+}
+
+function period(settings, id) {
+  return (settings.volume?.periods || []).find((p) => p.id === id) || {};
+}
+
+function fillRulesForm(envelope) {
+  const s = envelope.settings || {};
+  $('announceRulesMeta').textContent =
+    `${envelope.stationCode || '—'} · ${envelope.source || 'defaults'} · schema ${envelope.schemaVersion || '—'}` +
+    (envelope.updatedAt ? ` · saved ${new Date(envelope.updatedAt).toLocaleString('en-IN')}` : '');
+  $('ruleLanguageOrder').value = (s.languageOrder || []).join(',');
+  $('ruleArrivalStart').value = s.arrival?.startMinutes ?? 30;
+  $('ruleWinFar').value = s.arrival?.windows?.[0]?.intervalMinutes ?? 3;
+  $('ruleWinNear').value = s.arrival?.windows?.[1]?.intervalMinutes ?? 5;
+  $('ruleShortMins').value = s.arrival?.shortNoticeMinutes ?? 5;
+  $('ruleShortCount').value = s.arrival?.shortNoticeCount ?? 2;
+  $('ruleDelayMin').value = s.delay?.minMinutes ?? 15;
+  $('ruleDelayMode').value = s.delay?.mode || 'first_only';
+  $('ruleDelayStep').value = s.delay?.stepMinutes ?? 15;
+  $('ruleDepartMins').value = s.departure?.minutesBefore ?? 10;
+  $('ruleStale').value = s.staleNtes || 'stop';
+  $('rulePfConfirm').checked = s.platformChange?.requireStaffConfirm !== false;
+  $('ruleCancelAuto').checked = s.cancelled?.auto !== false;
+  $('ruleReschedAuto').checked = s.rescheduled?.auto !== false;
+  const day = period(s, 'day');
+  const eve = period(s, 'evening');
+  const night = period(s, 'night');
+  $('ruleDayStart').value = day.start || '06:00';
+  $('ruleDayEnd').value = day.end || '18:00';
+  $('ruleDayDb').value = day.db ?? 85;
+  $('ruleEveStart').value = eve.start || '18:00';
+  $('ruleEveEnd').value = eve.end || '22:00';
+  $('ruleEveDb').value = eve.db ?? 75;
+  $('ruleNightStart').value = night.start || '22:00';
+  $('ruleNightEnd').value = night.end || '06:00';
+  $('ruleNightDb').value = night.db ?? 70;
+  $('ruleSink').value = s.audio?.sink || 'default';
+  $('ruleCapture').value = s.audio?.capture || 'default';
+  $('ruleIdle').value = s.advisory?.idleSeconds ?? 120;
+  $('ruleClips').value = JSON.stringify(s.advisory?.clips || [], null, 2);
+  $('ruleTemplates').value = JSON.stringify(s.templates || {}, null, 2);
+}
+
+function collectRulesForm() {
+  let clips = [];
+  let templates = undefined;
+  try {
+    clips = JSON.parse($('ruleClips').value || '[]');
+  } catch {
+    throw new Error('Advisory clips must be valid JSON');
+  }
+  try {
+    templates = JSON.parse($('ruleTemplates').value || '{}');
+  } catch {
+    throw new Error('Templates must be valid JSON');
+  }
+  return {
+    languageOrder: $('ruleLanguageOrder').value.split(',').map((s) => s.trim()).filter(Boolean),
+    arrival: {
+      startMinutes: Number($('ruleArrivalStart').value),
+      windows: [
+        { fromMinutes: 30, toMinutes: 15, intervalMinutes: Number($('ruleWinFar').value) },
+        { fromMinutes: 15, toMinutes: 0, intervalMinutes: Number($('ruleWinNear').value) }
+      ],
+      shortNoticeMinutes: Number($('ruleShortMins').value),
+      shortNoticeCount: Number($('ruleShortCount').value)
+    },
+    delay: {
+      minMinutes: Number($('ruleDelayMin').value),
+      mode: $('ruleDelayMode').value,
+      stepMinutes: Number($('ruleDelayStep').value)
+    },
+    departure: { minutesBefore: Number($('ruleDepartMins').value) },
+    staleNtes: $('ruleStale').value,
+    platformChange: { requireStaffConfirm: $('rulePfConfirm').checked, auto: false },
+    cancelled: { auto: $('ruleCancelAuto').checked },
+    rescheduled: { auto: $('ruleReschedAuto').checked },
+    volume: {
+      mode: 'time_of_day',
+      periods: [
+        { id: 'day', start: $('ruleDayStart').value, end: $('ruleDayEnd').value, db: Number($('ruleDayDb').value) },
+        { id: 'evening', start: $('ruleEveStart').value, end: $('ruleEveEnd').value, db: Number($('ruleEveDb').value) },
+        { id: 'night', start: $('ruleNightStart').value, end: $('ruleNightEnd').value, db: Number($('ruleNightDb').value) }
+      ]
+    },
+    audio: { sink: $('ruleSink').value.trim() || 'default', capture: $('ruleCapture').value.trim() || 'default' },
+    advisory: { idleSeconds: Number($('ruleIdle').value), clips },
+    templates
+  };
+}
+
+function setRulesStatus(message, isError) {
+  const el = $('announceRulesStatus');
+  if (!el) return;
+  el.hidden = !message;
+  el.textContent = message || '';
+  el.className = `station-status${isError ? ' error' : ''}`;
+}
+
+if ($('btnAnnounceRules')) {
+  $('btnAnnounceRules').addEventListener('click', async () => {
+    try {
+      const data = await api('/api/admin/announcements/settings');
+      fillRulesForm(data);
+      setRulesStatus('');
+      $('announceRulesModal').hidden = false;
+    } catch (err) {
+      setAnnounceStatus(err.message, true);
+    }
+  });
+  $('btnRulesClose').addEventListener('click', () => {
+    $('announceRulesModal').hidden = true;
+  });
+  $('announceRulesModal').addEventListener('click', (ev) => {
+    if (ev.target === $('announceRulesModal')) $('announceRulesModal').hidden = true;
+  });
+  $('btnRulesSave').addEventListener('click', async () => {
+    try {
+      const settings = collectRulesForm();
+      const data = await api('/api/admin/announcements/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ settings })
+      });
+      fillRulesForm(data);
+      setRulesStatus(`Saved overlay for ${data.stationCode}`);
+    } catch (err) {
+      setRulesStatus(err.message, true);
+    }
+  });
+  $('btnRulesReset').addEventListener('click', async () => {
+    if (!confirm('Restore PDF defaults for this station?')) return;
+    try {
+      const data = await api('/api/admin/announcements/settings/reset', { method: 'POST', body: '{}' });
+      fillRulesForm(data);
+      setRulesStatus('Restored defaults');
+    } catch (err) {
+      setRulesStatus(err.message, true);
     }
   });
 }

@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { readJson } = require('../storage/atomic-file');
+const { readJson, atomicWriteJson } = require('../storage/atomic-file');
 const { overlayStationDir, coachSourceDataDir } = require('../../shared/paths');
 const { mergeOverlay } = require('./merge');
 
@@ -39,10 +39,34 @@ function overlayExists(stationCode, fileName) {
   }
 }
 
+function saveStationOverlay(stationCode, fileName, data) {
+  const dest = overlayStationPath(stationCode, fileName);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  atomicWriteJson(dest, data);
+  return dest;
+}
+
+function deleteStationOverlay(stationCode, fileName) {
+  const dest = overlayStationPath(stationCode, fileName);
+  try {
+    if (fs.existsSync(dest)) fs.unlinkSync(dest);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function loadOverlayDocument(stationCode, fileName) {
+  return loadJsonFile(overlayStationPath(stationCode, fileName));
+}
+
 module.exports = {
   normalizeStation,
   repoStationPath,
   overlayStationPath,
   loadStationDocument,
-  overlayExists
+  overlayExists,
+  saveStationOverlay,
+  deleteStationOverlay,
+  loadOverlayDocument
 };

@@ -230,9 +230,35 @@ function createAdminApp() {
     }
   });
 
+  function stationCode() {
+    return loadConfig().config?.stationCode || 'BG';
+  }
+
   app.get('/api/admin/announcements', (req, res) => {
     if (!requireAdmin(req, res, log)) return;
     res.json(getAnnounceRuntime().status());
+  });
+
+  app.get('/api/admin/announcements/settings', (req, res) => {
+    if (!requireAdmin(req, res, log)) return;
+    const { announcementSettingsEnvelope } = require('../announce/config');
+    res.json(announcementSettingsEnvelope(stationCode()));
+  });
+
+  app.put('/api/admin/announcements/settings', (req, res) => {
+    if (!requireAdmin(req, res, log)) return;
+    const { saveAnnouncementSettings } = require('../announce/config');
+    const saved = saveAnnouncementSettings(stationCode(), req.body || {}, req.adminActor || 'local-admin');
+    recordAudit({ action: 'announce_settings', details: { stationCode: saved.stationCode } });
+    res.json(saved);
+  });
+
+  app.post('/api/admin/announcements/settings/reset', (req, res) => {
+    if (!requireAdmin(req, res, log)) return;
+    const { resetAnnouncementSettings } = require('../announce/config');
+    const saved = resetAnnouncementSettings(stationCode(), req.adminActor || 'local-admin');
+    recordAudit({ action: 'announce_settings_reset', details: { stationCode: saved.stationCode } });
+    res.json(saved);
   });
 
   app.post('/api/admin/announcements/auto', (req, res) => {
@@ -246,7 +272,42 @@ function createAdminApp() {
     if (!requireAdmin(req, res, log)) return;
     const paused = Boolean(req.body?.paused);
     recordAudit({ action: 'announce_pause', details: { paused } });
-    res.json(getAnnounceRuntime().setPaused(paused));
+    res.json(paused ? getAnnounceRuntime().setPaused(true) : getAnnounceRuntime().resumeAutomatic());
+  });
+
+  app.post('/api/admin/announcements/stop', (req, res) => {
+    if (!requireAdmin(req, res, log)) return;
+    recordAudit({ action: 'announce_stop' });
+    res.json(getAnnounceRuntime().stopNow());
+  });
+
+  app.post('/api/admin/announcements/clear', (req, res) => {
+    if (!requireAdmin(req, res, log)) return;
+    recordAudit({ action: 'announce_clear' });
+    res.json(getAnnounceRuntime().clearAll());
+  });
+
+  app.post('/api/admin/announcements/confirm-platform', (req, res) => {
+    if (!requireAdmin(req, res, log)) return;
+    const result = getAnnounceRuntime().confirmPlatform(req.body?.trainNo);
+    if (!result.ok) return res.status(400).json(result);
+    recordAudit({ action: 'announce_confirm_platform', details: { trainNo: req.body?.trainNo } });
+    res.json(result);
+  });
+
+  app.post('/api/admin/announcements/live/start', (req, res) => {
+    if (!requireAdmin(req, res, log)) return;
+    const result = getAnnounceRuntime().beginLive(req.body || {});
+    if (!result.ok) return res.status(400).json(result);
+    recordAudit({ action: 'announce_live_start' });
+    res.json(result);
+  });
+
+  app.post('/api/admin/announcements/live/stop', (req, res) => {
+    if (!requireAdmin(req, res, log)) return;
+    const result = getAnnounceRuntime().endLive(req.body || {});
+    recordAudit({ action: 'announce_live_stop' });
+    res.json(result);
   });
 
   app.post('/api/admin/announcements/volume', (req, res) => {

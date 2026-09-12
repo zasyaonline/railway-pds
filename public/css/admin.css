@@ -284,6 +284,71 @@
   padding: 1.25rem;
 }
 
+.announce-rules-card {
+  width: min(52rem, 100%);
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.announce-rules-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.announce-rules-form fieldset {
+  border: 1px solid #2a5a78;
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem 0.9rem;
+}
+
+.announce-rules-form legend {
+  color: #7dd3fc;
+  padding: 0 0.35rem;
+}
+
+.announce-rules-form label {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  margin: 0.4rem 0 0.2rem;
+}
+
+.announce-rules-form input,
+.announce-rules-form select,
+.announce-rules-form textarea {
+  width: 100%;
+  background: #0d2240;
+  border: 1px solid #334155;
+  color: #e8edf5;
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  font: inherit;
+}
+
+.announce-rules-form textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+}
+
+.rule-check {
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  color: #e8edf5 !important;
+}
+
+.rule-check input {
+  width: auto !important;
+}
+
+.pending-platform {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  border: 1px dashed #f97316;
+  border-radius: 8px;
+  color: #fed7aa;
+}
+
 .announce-modal-card h3 {
   margin: 0 0 0.5rem;
   color: #7dd3fc;
