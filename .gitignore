@@ -7,6 +7,7 @@ data/sessions.json
 *.log
 .aws/
 *.pem
+!keys/licence-public.pem
 credentials
 credentilas
 keys/licence-private.pem

@@ -1,0 +1,12 @@
+{
+  "licenceId": "ZSY-BG-DEMO-1Y",
+  "stationCode": "BG",
+  "products": [
+    "platform",
+    "coach"
+  ],
+  "validFrom": "2026-09-24",
+  "validUntil": "2027-09-24",
+  "installationId": "",
+  "signature": "TrD0J+AWB+Xv3c0ZjZscjzRW8RZrlMmPUK7dhv82ZHkQvGtLRuFjS8/H+dK+g738kKZhQqBrYa5orx+tg7XmAA=="
+}
