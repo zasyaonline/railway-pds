@@ -4,7 +4,13 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { defaultAnnouncements } = require('../../edge/announce/defaults');
 const { evaluateBoard, evaluateTrain, suggestedManualType, arrivalIntervalMinutes } = require('../../edge/announce/engine');
-const { renderAnnouncement, speakDigits } = require('../../edge/announce/normalize');
+const {
+  renderAnnouncement,
+  speakDigits,
+  speakNumber,
+  speakClockTime,
+  expandSpokenTimes
+} = require('../../edge/announce/normalize');
 
 function cfg(extra) {
   return { ...defaultAnnouncements(), ...extra };
@@ -15,7 +21,51 @@ function emptyMemory() {
 }
 
 test('train numbers are spoken digit by digit', () => {
+  assert.match(speakDigits('12789', 'en'), /one two seven eight nine/);
   assert.match(speakDigits('12723', 'en'), /one two seven two three/);
+  assert.match(speakDigits('17201', 'te'), /ఒకటి, ఏడు, రెండు, సున్నా, ఒకటి/);
+});
+
+test('NTES train names expand for natural English speech', () => {
+  const { speakProperName } = require('../../edge/announce/normalize');
+  assert.equal(speakProperName('GOLCONDA EXP'), 'Golconda Express');
+  assert.equal(speakProperName('SECUNDERABAD JN'), 'Secunderabad Junction');
+});
+
+test('pause after train number before platform cue', () => {
+  const { ensurePlatformPause, renderAnnouncement } = require('../../edge/announce/normalize');
+  assert.match(ensurePlatformPause('రైలు నంబర్ ఒకటి ప్లాట్‌ఫామ్ నంబర్ ఒకటి'), /\. ప్లాట్/);
+  const text = renderAnnouncement({
+    type: 'arriving',
+    lang: 'en',
+    config: {
+      ...defaultAnnouncements(),
+      templates: {
+        arriving: {
+          en: 'Train number {trainNo} {trainName} will arrive on platform number {platform}.'
+        }
+      }
+    },
+    minutes: 5,
+    train: { trainNo: '17201', trainName: 'GOLCONDA EXP', platform: '1' }
+  });
+  assert.match(text, /one\.\s/i);
+  assert.match(text, /Express\.\s+will arrive on platform number/i);
+  assert.doesNotMatch(text, /on\.\s*platform/i);
+});
+
+test('clock times are spoken as hour plus minutes, not digit-wise', () => {
+  assert.equal(speakClockTime(3, 15, 'en'), 'three fifteen');
+  assert.equal(speakClockTime(3, 0, 'en'), "three o'clock");
+  assert.match(speakClockTime(3, 15, 'hi'), /तीन/);
+  assert.match(speakClockTime(3, 15, 'hi'), /पंद्रह/);
+  assert.equal(expandSpokenTimes('Expected at 3:15 today', 'en'), 'Expected at three fifteen today');
+});
+
+test('delay and minute quantities use cardinals, not digit spelling', () => {
+  assert.equal(speakNumber(15, 'en'), 'fifteen');
+  assert.equal(speakNumber(60, 'en'), 'sixty');
+  assert.equal(speakNumber(15, 'hi'), 'पंद्रह');
 });
 
 test('language order defaults to Telugu then English then Hindi', () => {
@@ -217,7 +267,7 @@ test('Telugu arriving uses IR PA attention and platform number framing', () => {
   });
   assert.match(text, /యాత్రీకుల/);
   assert.match(text, /ప్లాట్‌ఫామ్ నంబర్/);
-  assert.match(text, /ఒకటి రెండు ఏడు రెండు మూడు/);
+  assert.match(text, /ఒకటి, రెండు, ఏడు, రెండు, మూడు/);
   assert.match(text, /సికింద్రాబాద్/);
   assert.match(text, /విజయవాడ/);
   assert.doesNotMatch(text, /^దయచేసి శ్రద్ధ/);
@@ -232,7 +282,7 @@ test('Telugu delayed keeps minutes and PA opener', () => {
     train: { trainNo: '17014', trainName: 'Test', platform: '1', delay: 60 }
   });
   assert.match(text, /యాత్రీకుల/);
-  assert.match(text, /ఆరు సున్నా/);
+  assert.match(text, /అరవై/); // 60 as cardinal, not digit-wise ఆరు సున్నా
   assert.match(text, /నిమిషాలు ఆలస్యం/);
 });
 

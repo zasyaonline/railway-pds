@@ -7,7 +7,7 @@
   <link rel="icon" href="/platform/img/favicon.png" type="image/png" sizes="64x64">
   <link rel="icon" href="/platform/img/ir-logo.png" type="image/png">
   <link rel="stylesheet" href="/platform/css/style.css?v=20260909a">
-  <link rel="stylesheet" href="/platform/css/admin.css?v=20260912a">
+  <link rel="stylesheet" href="/platform/css/admin.css?v=20260924a">
 </head>
 <body class="admin-body">
   <header class="header admin-header">
@@ -60,6 +60,23 @@
           <button type="button" id="btnServiceStop" class="btn-refresh btn-stop">Stop service</button>
         </div>
       </div>
+
+      <nav class="display-links" aria-label="Passenger displays">
+        <a
+          class="btn-refresh btn-start display-link"
+          id="linkPlatformDisplay"
+          href="/platform/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Open platform display</a>
+        <a
+          class="btn-refresh btn-start display-link"
+          id="linkCoachDisplay"
+          href="/coach/?station=BG&amp;display=entrance-main"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Open coach position</a>
+      </nav>
 
       <section class="station-card">
         <h2>Display station</h2>
@@ -194,11 +211,7 @@
         on this appliance NTES is the systemd poller (status above).
       </p>
       <p>
-        <a class="admin-link" href="/platform/">Open platform display →</a>
-        ·
-        <a class="admin-link" href="/coach/?station=BG&amp;display=entrance-main">Open coach display →</a>
-        ·
-        <a class="admin-link" href="verify.html">Verification screen →</a>
+        <a class="admin-link" href="verify.html" target="_blank" rel="noopener noreferrer">Verification screen →</a>
       </p>
     </section>
 
@@ -329,6 +342,6 @@
   </main>
 
   <script src="/platform/config.js?v=20260825b"></script>
-  <script src="admin.js?v=20260912a"></script>
+  <script src="admin.js?v=20260924b"></script>
 </body>
 </html>

@@ -211,11 +211,20 @@ function showResolvedPreview(code, name, names) {
   el.hidden = false;
 }
 
+function updateDisplayLinks(stationCode) {
+  const code = (stationCode || $('stationCodeInput')?.value || 'BG').trim().toUpperCase() || 'BG';
+  const coach = $('linkCoachDisplay');
+  if (coach) {
+    coach.href = `/coach/?station=${encodeURIComponent(code)}&display=entrance-main`;
+  }
+}
+
 function syncStationForm(code, name, force, names) {
   $('currentStation').textContent = code ? `${code}` : '—';
   if (name) {
     $('currentStation').title = name;
   }
+  updateDisplayLinks(code);
   showResolvedPreview(code, name, names);
 
   if (!force && (stationFormDirty || isStationFormFocused())) {
@@ -317,17 +326,23 @@ function renderAnnouncements(data) {
     tbody.innerHTML = `<tr class="no-trains"><td colspan="5">No announcement history</td></tr>`;
     return;
   }
-  tbody.innerHTML = rows.map((e) => `
+  tbody.innerHTML = rows.map((e) => {
+    const preview = e.transcript || e.spoken?.en || '';
+    const short = preview.length > 90 ? `${preview.slice(0, 87)}…` : preview;
+    const result = e.ok
+      ? (short ? `ok · ${escapeHtml(short)}` : 'ok')
+      : escapeHtml(e.error || 'fail');
+    return `
     <tr>
       <td>${e.at ? new Date(e.at).toLocaleTimeString('en-IN') : '—'}</td>
-      <td>${e.type || '—'}</td>
-      <td>${e.trainNo || '—'}</td>
-      <td>${e.ok ? 'ok' : (e.error || 'fail')}</td>
+      <td>${escapeHtml(e.type || '—')}</td>
+      <td>${escapeHtml(e.trainNo || '—')}</td>
+      <td title="${escapeHtml(preview)}">${result}</td>
       <td>
-        <button type="button" class="btn-refresh btn-start btn-announce-replay" data-id="${e.id}">Replay</button>
+        <button type="button" class="btn-refresh btn-start btn-announce-replay" data-id="${escapeHtml(e.id)}">Replay</button>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
   tbody.querySelectorAll('.btn-announce-replay').forEach((btn) => {
     btn.addEventListener('click', async () => {
       btn.disabled = true;

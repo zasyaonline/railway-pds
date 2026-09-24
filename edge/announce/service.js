@@ -473,6 +473,7 @@ function createAnnounceRuntime() {
     }
     const langs = job.languages || ['te', 'en', 'hi'];
     const wavs = [];
+    const spoken = {};
     let lastError = null;
     for (const lang of langs) {
       const text = renderAnnouncement({
@@ -484,6 +485,7 @@ function createAnnounceRuntime() {
         minutes: job.minutes
       });
       if (!text) continue;
+      spoken[lang] = text;
       const synth = await synthesize(text, lang, cfg.voices?.[lang] || '');
       if (!synth.ok || !wavLooksValid(synth.outPath)) {
         lastError = synth.error || 'wav missing';
@@ -496,6 +498,7 @@ function createAnnounceRuntime() {
     const played = await playClips(wavs, cfg);
     if (played.error) lastError = played.error;
     if (played.ok) lastError = null;
+    const transcript = job.transcript || spoken.en || spoken.hi || spoken.te || '';
     appendHistory({
       id: job.id,
       type: job.type,
@@ -504,7 +507,9 @@ function createAnnounceRuntime() {
       source: job.source,
       mode: job.source,
       extra: job.extra,
-      transcript: job.transcript,
+      transcript,
+      spoken,
+      minutes: job.minutes != null ? job.minutes : null,
       ok: wavs.length > 0,
       error: lastError,
       wavs

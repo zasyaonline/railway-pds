@@ -5,8 +5,9 @@ const fs = require('fs');
 const path = require('path');
 
 /** Change this when amplitude/rate/voice tuning changes so WAV cache cannot replay old distorted files. */
-const ESPEAK_PROFILE = 'pa-v3';
-const ESPEAK_VOICES = { en: 'en-gb', hi: 'hi', te: 'te' };
+const ESPEAK_PROFILE = 'pa-v6-te-hi-en-neutral';
+/* TE Telugu, HI Hindi male, EN neutral English (not hi — accent). */
+const ESPEAK_VOICES = { en: 'en-us', hi: 'hi', te: 'te' };
 
 function whichSync(bin) {
   const dirs = [

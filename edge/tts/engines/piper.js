@@ -4,10 +4,18 @@ const fs = require('fs');
 const path = require('path');
 const { whichSync, runCommand } = require('./espeak');
 
-/* IR PA profile: slightly slower than conversation; longer gaps between sentences. */
-const PIPER_PROFILE = 'ir-pa-v1';
+/* IR PA profile.
+   Voices: TE=venkatesh (male), HI=pratham (male), EN=lessac (neutral English —
+   Pratham on English adds a Hindi accent on train names). */
+const PIPER_PROFILE = 'ir-pa-v5-platform-pause';
 const LENGTH_SCALE = process.env.ZASYA_PIPER_LENGTH_SCALE || '1.08';
-const SENTENCE_SILENCE = process.env.ZASYA_PIPER_SENTENCE_SILENCE || '0.40';
+/* Telugu digit runs need more dwell time than EN/HI. */
+const LENGTH_SCALE_TE = process.env.ZASYA_PIPER_LENGTH_SCALE_TE || '1.22';
+/* Slightly longer gap after "." so train number does not merge into platform. */
+const SENTENCE_SILENCE = process.env.ZASYA_PIPER_SENTENCE_SILENCE || '0.55';
+const HINDI_MALE = 'hi_IN-pratham-medium.onnx';
+const ENGLISH_NEUTRAL = 'en_US-lessac-medium.onnx';
+const TELUGU_MALE = 'te_IN-venkatesh-medium.onnx';
 
 function modelsDir() {
   return process.env.ZASYA_PIPER_MODELS || path.join(
@@ -19,17 +27,21 @@ function modelsDir() {
 
 function modelCandidates(language) {
   const dir = modelsDir();
-  /* Telugu: prefer female PA-style (padmavathi) when installed; else venkatesh. */
   const names = {
-    en: ['en_US-lessac-medium.onnx', 'en_GB-alan-medium.onnx'],
-    hi: ['hi_IN-pratham-medium.onnx'],
-    te: ['te_IN-padmavathi-medium.onnx', 'te_IN-venkatesh-medium.onnx', 'te_IN.onnx']
+    en: [ENGLISH_NEUTRAL, 'en_GB-alan-medium.onnx', HINDI_MALE],
+    hi: [HINDI_MALE],
+    te: [TELUGU_MALE, 'te_IN-padmavathi-medium.onnx', 'te_IN.onnx']
   };
   return (names[language] || names.en).map((name) => path.join(dir, name));
 }
 
 function modelFor(language) {
   return modelCandidates(language).find((p) => fs.existsSync(p)) || '';
+}
+
+function lengthScaleFor(language) {
+  if (String(language || '').startsWith('te')) return LENGTH_SCALE_TE;
+  return LENGTH_SCALE;
 }
 
 function piperBin() {
@@ -48,10 +60,11 @@ async function synthesizePiper({ text, language, voice, outPath, timeoutMs }) {
     return { ok: false, error: `piper model missing for ${language}` };
   }
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  const scale = lengthScaleFor(language);
   const args = [
     '--model', modelPath,
     '--output_file', outPath,
-    '--length_scale', String(LENGTH_SCALE),
+    '--length_scale', String(scale),
     '--sentence_silence', String(SENTENCE_SILENCE)
   ];
   let result = await runCommand(bin, args, {
@@ -68,4 +81,4 @@ async function synthesizePiper({ text, language, voice, outPath, timeoutMs }) {
   return { ok: true, engine: 'piper', voice: path.basename(modelPath), outPath, profile: PIPER_PROFILE };
 }
 
-module.exports = { synthesizePiper, piperBin, modelFor, PIPER_PROFILE };
+module.exports = { synthesizePiper, piperBin, modelFor, PIPER_PROFILE, lengthScaleFor };
