@@ -206,6 +206,8 @@ function createAnnounceRuntime() {
       trainNo: body.trainNo || found?.trainNo || '',
       trainName: body.trainName || found?.trainName || '',
       platform: body.platform || found?.platform || '',
+      from: body.from || found?.from || '',
+      to: body.to || found?.to || '',
       delay: body.delay != null && body.delay !== '' ? Number(body.delay) : Number(found?.delay || 0),
       status: body.status || found?.status || '',
       runningState: body.runningState || found?.runningState || '',

@@ -4,7 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const { whichSync, runCommand } = require('./espeak');
 
-const PIPER_PROFILE = 'paced-v1';
+/* IR PA profile: slightly slower than conversation; longer gaps between sentences. */
+const PIPER_PROFILE = 'ir-pa-v1';
+const LENGTH_SCALE = process.env.ZASYA_PIPER_LENGTH_SCALE || '1.08';
+const SENTENCE_SILENCE = process.env.ZASYA_PIPER_SENTENCE_SILENCE || '0.40';
 
 function modelsDir() {
   return process.env.ZASYA_PIPER_MODELS || path.join(
@@ -16,10 +19,11 @@ function modelsDir() {
 
 function modelCandidates(language) {
   const dir = modelsDir();
+  /* Telugu: prefer female PA-style (padmavathi) when installed; else venkatesh. */
   const names = {
     en: ['en_US-lessac-medium.onnx', 'en_GB-alan-medium.onnx'],
     hi: ['hi_IN-pratham-medium.onnx'],
-    te: ['te_IN-venkatesh-medium.onnx', 'te_IN-padmavathi-medium.onnx', 'te_IN.onnx']
+    te: ['te_IN-padmavathi-medium.onnx', 'te_IN-venkatesh-medium.onnx', 'te_IN.onnx']
   };
   return (names[language] || names.en).map((name) => path.join(dir, name));
 }
@@ -47,8 +51,8 @@ async function synthesizePiper({ text, language, voice, outPath, timeoutMs }) {
   const args = [
     '--model', modelPath,
     '--output_file', outPath,
-    '--length_scale', '0.93',
-    '--sentence_silence', '0.25'
+    '--length_scale', String(LENGTH_SCALE),
+    '--sentence_silence', String(SENTENCE_SILENCE)
   ];
   let result = await runCommand(bin, args, {
     input: text,

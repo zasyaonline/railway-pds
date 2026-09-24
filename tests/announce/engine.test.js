@@ -199,3 +199,52 @@ test('reschedule fires when STA changes after first sighting', () => {
   );
   assert.ok(events.some((e) => e.type === 'rescheduled'));
 });
+
+test('Telugu arriving uses IR PA attention and platform number framing', () => {
+  const config = cfg();
+  const text = renderAnnouncement({
+    type: 'arriving',
+    lang: 'te',
+    config,
+    minutes: 12,
+    train: {
+      trainNo: '12723',
+      trainName: 'సతవాహన ఎక్స్‌ప్రెస్',
+      platform: '2',
+      from: 'సికింద్రాబాద్',
+      to: 'విజయవాడ'
+    }
+  });
+  assert.match(text, /యాత్రీకుల/);
+  assert.match(text, /ప్లాట్‌ఫామ్ నంబర్/);
+  assert.match(text, /ఒకటి రెండు ఏడు రెండు మూడు/);
+  assert.match(text, /సికింద్రాబాద్/);
+  assert.match(text, /విజయవాడ/);
+  assert.doesNotMatch(text, /^దయచేసి శ్రద్ధ/);
+});
+
+test('Telugu delayed keeps minutes and PA opener', () => {
+  const config = cfg();
+  const text = renderAnnouncement({
+    type: 'delayed',
+    lang: 'te',
+    config,
+    train: { trainNo: '17014', trainName: 'Test', platform: '1', delay: 60 }
+  });
+  assert.match(text, /యాత్రీకుల/);
+  assert.match(text, /ఆరు సున్నా/);
+  assert.match(text, /నిమిషాలు ఆలస్యం/);
+});
+
+test('empty from/to does not leave route debris', () => {
+  const config = cfg();
+  const text = renderAnnouncement({
+    type: 'departing',
+    lang: 'en',
+    config,
+    train: { trainNo: '1', trainName: 'X', platform: '3' }
+  });
+  assert.match(text, /will depart/i);
+  assert.doesNotMatch(text, /\bto\s+\./i);
+  assert.doesNotMatch(text, /from\s+to/i);
+});

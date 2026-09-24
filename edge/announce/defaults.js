@@ -117,51 +117,53 @@ function defaultAnnouncements() {
       te: ''
     },
     historyRetention: 200,
+    /* IR PA slot frames: attention → train (digits) → name → route → event → platform.
+       Vendor wording until Railway-approved copy arrives. Do not clone station PA audio. */
     templates: {
       approaching: {
-        en: 'Attention please. Train number {trainNo} {trainName} is expected to arrive on platform number {platform} in {minutes} minutes.',
-        hi: 'कृपया ध्यान दें। गाड़ी संख्या {trainNo} {trainName} प्लेटफॉर्म संख्या {platform} पर {minutes} मिनट में आने वाली है।',
-        te: 'దయచేసి శ్రద్ధ వహించండి. రైలు నంబర్ {trainNo} {trainName} ప్లాట్‌ఫామ్ నంబర్ {platform} పై {minutes} నిమిషాల్లో రావచ్చు.'
+        en: 'Attention please. Train number {trainNo}. {trainName}. {from} to {to}. Expected to arrive on platform number {platform} in {minutes} minutes.',
+        hi: 'यात्रियों कृपया ध्यान दें। गाड़ी संख्या {trainNo}. {trainName}. {from} से {to} तक। प्लेटफॉर्म नंबर {platform} पर {minutes} मिनट में आने वाली है।',
+        te: 'యాత్రీకుల దయచేసి గమనించండి. రైలు నంబర్ {trainNo}. {trainName}. {from} నుండి {to} వరకు. ప్లాట్‌ఫామ్ నంబర్ {platform} పై {minutes} నిమిషాల్లో రావచ్చు.'
       },
       arriving: {
-        en: 'Attention please. Train number {trainNo} {trainName} will arrive on platform number {platform} in {minutes} minutes.',
-        hi: 'कृपया ध्यान दें। गाड़ी संख्या {trainNo} {trainName} प्लेटफॉर्म संख्या {platform} पर {minutes} मिनट में आने वाली है।',
-        te: 'దయచేసి శ్రద్ధ వహించండి. రైలు నంబర్ {trainNo} {trainName} ప్లాట్‌ఫామ్ నంబర్ {platform} పై {minutes} నిమిషాల్లో వస్తుంది.'
+        en: 'Attention please. Train number {trainNo}. {trainName}. {from} to {to}. Will arrive on platform number {platform} in {minutes} minutes.',
+        hi: 'यात्रियों कृपया ध्यान दें। गाड़ी संख्या {trainNo}. {trainName}. {from} से {to} तक। प्लेटफॉर्म नंबर {platform} पर {minutes} मिनट में आने वाली है।',
+        te: 'యాత్రీకుల దయచేసి గమనించండి. రైలు నంబర్ {trainNo}. {trainName}. {from} నుండి {to} వరకు. ప్లాట్‌ఫామ్ నంబర్ {platform} పై {minutes} నిమిషాల్లో వస్తుంది.'
       },
       departing: {
-        en: 'Attention please. Train number {trainNo} {trainName} will depart from platform number {platform}.',
-        hi: 'कृपया ध्यान दें। गाड़ी संख्या {trainNo} {trainName} प्लेटफॉर्म संख्या {platform} से रवाना होगी।',
-        te: 'దయచేసి శ్రద్ధ వహించండి. రైలు నంబర్ {trainNo} {trainName} ప్లాట్‌ఫామ్ నంబర్ {platform} నుంచి బయలుదేరబోతోంది.'
+        en: 'Attention please. Train number {trainNo}. {trainName}. {from} to {to}. Will depart from platform number {platform}.',
+        hi: 'यात्रियों कृपया ध्यान दें। गाड़ी संख्या {trainNo}. {trainName}. {from} से {to} तक। प्लेटफॉर्म नंबर {platform} से रवाना होगी।',
+        te: 'యాత్రీకుల దయచేసి గమనించండి. రైలు నంబర్ {trainNo}. {trainName}. {from} నుండి {to} వరకు. ప్లాట్‌ఫామ్ నంబర్ {platform} నుంచి బయలుదేరబోతోంది.'
       },
       delayed: {
-        en: 'Attention please. Train number {trainNo} {trainName} is delayed by {delay} minutes.',
-        hi: 'कृपया ध्यान दें। गाड़ी संख्या {trainNo} {trainName} {delay} मिनट विलंब से चल रही है।',
-        te: 'దయచేసి శ్రద్ధ వహించండి. రైలు నంబర్ {trainNo} {trainName} {delay} నిమిషాలు ఆలస్యంగా నడుస్తోంది.'
+        en: 'Attention please. Train number {trainNo}. {trainName}. {from} to {to}. Is currently delayed by {delay} minutes.',
+        hi: 'यात्रियों कृपया ध्यान दें। गाड़ी संख्या {trainNo}. {trainName}. {from} से {to} तक। वर्तमान में {delay} मिनट विलंब से चल रही है।',
+        te: 'యాత్రీకుల దయచేసి గమనించండి. రైలు నంబర్ {trainNo}. {trainName}. {from} నుండి {to} వరకు. ప్రస్తుతం {delay} నిమిషాలు ఆలస్యంగా నడుస్తోంది.'
       },
       platform_changed: {
-        en: 'Attention please. Train number {trainNo} {trainName} will now arrive on platform number {platform}.',
-        hi: 'कृपया ध्यान दें। गाड़ी संख्या {trainNo} {trainName} अब प्लेटफॉर्म संख्या {platform} पर आएगी।',
-        te: 'దయచేసి శ్రద్ధ వహించండి. రైలు నంబర్ {trainNo} {trainName} ఇప్పుడు ప్లాట్‌ఫామ్ నంబర్ {platform} పై వస్తుంది.'
+        en: 'Attention please. Train number {trainNo}. {trainName}. Will now arrive on platform number {platform}.',
+        hi: 'यात्रियों कृपया ध्यान दें। गाड़ी संख्या {trainNo}. {trainName}. अब प्लेटफॉर्म नंबर {platform} पर आएगी।',
+        te: 'యాత్రీకుల దయచేసి గమనించండి. రైలు నంబర్ {trainNo}. {trainName}. ఇప్పుడు ప్లాట్‌ఫామ్ నంబర్ {platform} పై వస్తుంది.'
       },
       cancelled: {
-        en: 'Attention please. Train number {trainNo} {trainName} is cancelled today.',
-        hi: 'कृपया ध्यान दें। गाड़ी संख्या {trainNo} {trainName} आज रद्द है।',
-        te: 'దయచేసి శ్రద్ధ వహించండి. రైలు నంబర్ {trainNo} {trainName} ఈరోజు రద్దు చేయబడింది.'
+        en: 'Attention please. Train number {trainNo}. {trainName}. Is cancelled today.',
+        hi: 'यात्रियों कृपया ध्यान दें। गाड़ी संख्या {trainNo}. {trainName}. आज रद्द है।',
+        te: 'యాత్రీకుల దయచేసి గమనించండి. రైలు నంబర్ {trainNo}. {trainName}. ఈరోజు రద్దు చేయబడింది.'
       },
       rescheduled: {
-        en: 'Attention please. Train number {trainNo} {trainName} has been rescheduled.',
-        hi: 'कृपया ध्यान दें। गाड़ी संख्या {trainNo} {trainName} का समय बदल दिया गया है।',
-        te: 'దయచేసి శ్రద్ధ వహించండి. రైలు నంబర్ {trainNo} {trainName} సమయం మార్చబడింది.'
+        en: 'Attention please. Train number {trainNo}. {trainName}. Has been rescheduled.',
+        hi: 'यात्रियों कृपया ध्यान दें। गाड़ी संख्या {trainNo}. {trainName}. का समय बदल दिया गया है।',
+        te: 'యాత్రీకుల దయచేసి గమనించండి. రైలు నంబర్ {trainNo}. {trainName}. సమయం మార్చబడింది.'
       },
       boarding: {
-        en: 'Passengers are requested to board train number {trainNo} {trainName} on platform number {platform}.',
-        hi: 'यात्रियों से अनुरोध है कि गाड़ी संख्या {trainNo} {trainName} में प्लेटफॉर्म संख्या {platform} से सवार हों।',
-        te: 'ప్రయాణికులు రైలు నంబర్ {trainNo} {trainName}లో ప్లాట్‌ఫామ్ నంబర్ {platform} నుంచి ఎక్కవలసిందిగా కోరడమైనది.'
+        en: 'Attention please. Passengers are requested to board train number {trainNo}. {trainName}. On platform number {platform}.',
+        hi: 'यात्रियों कृपया ध्यान दें। गाड़ी संख्या {trainNo}. {trainName}. में प्लेटफॉर्म नंबर {platform} से सवार हों।',
+        te: 'యాత్రీకుల దయచేసి గమనించండి. రైలు నంబర్ {trainNo}. {trainName}. ప్లాట్‌ఫామ్ నంబర్ {platform} నుంచి ఎక్కవలసిందిగా కోరడమైనది.'
       },
       special: {
-        en: 'Attention please. Special train {trainNo} {extra}.',
-        hi: 'कृपया ध्यान दें। विशेष गाड़ी {trainNo} {extra}।',
-        te: 'దయచేసి శ్రద్ధ వహించండి. ప్రత్యేక రైలు {trainNo} {extra}.'
+        en: 'Attention please. Special train number {trainNo}. {extra}.',
+        hi: 'यात्रियों कृपया ध्यान दें। विशेष गाड़ी संख्या {trainNo}. {extra}.',
+        te: 'యాత్రీకుల దయచేసి గమనించండి. ప్రత్యేక రైలు నంబర్ {trainNo}. {extra}.'
       },
       greeting: {
         en: '{extra}',
@@ -175,8 +177,8 @@ function defaultAnnouncements() {
       },
       manual: {
         en: 'Attention please. {extra}',
-        hi: 'कृपया ध्यान दें। {extra}',
-        te: 'దయచేసి శ్రద్ధ వహించండి. {extra}'
+        hi: 'यात्रियों कृपया ध्यान दें। {extra}',
+        te: 'యాత్రీకుల దయచేసి గమనించండి. {extra}'
       }
     }
   };
