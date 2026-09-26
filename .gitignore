@@ -17,3 +17,6 @@ deployment/vm/.cache/
 tts-poc/models/
 tts-poc/output/
 tts-poc/piper-bin/
+
+__pycache__/
+*.pyc
