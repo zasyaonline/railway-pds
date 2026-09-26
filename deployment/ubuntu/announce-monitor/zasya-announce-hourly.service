@@ -1,0 +1,8 @@
+[Unit]
+Description=Zasya announce monitor hourly rule review
+After=zasya-announce-collect.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/sbin/zasya-announce-monitor.py hourly
+Nice=10

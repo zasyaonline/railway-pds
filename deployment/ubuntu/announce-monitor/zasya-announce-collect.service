@@ -1,0 +1,8 @@
+[Unit]
+Description=Zasya announce monitor collector (history → persistent log)
+After=zasya-railway-admin.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/sbin/zasya-announce-monitor.py collect
+Nice=10

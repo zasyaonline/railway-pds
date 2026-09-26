@@ -1,0 +1,7 @@
+[Unit]
+Description=Stop announce monitor after 24h and write summary
+After=zasya-announce-hourly.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '/usr/bin/python3 /usr/local/sbin/zasya-announce-monitor.py summarize; systemctl disable --now zasya-announce-collect.timer zasya-announce-hourly.timer zasya-announce-monitor-stop.timer; echo stopped $(date -Is) >> /var/log/zasya/announce-monitor/run.log'

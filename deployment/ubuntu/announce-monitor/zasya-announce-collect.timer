@@ -1,0 +1,12 @@
+[Unit]
+Description=Collect announce history every minute (24h monitor)
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=60s
+AccuracySec=15s
+Persistent=true
+Unit=zasya-announce-collect.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly announce vs rules review (24h monitor)
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit=zasya-announce-hourly.service
+
+[Install]
+WantedBy=timers.target

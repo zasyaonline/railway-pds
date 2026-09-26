@@ -1,0 +1,10 @@
+[Unit]
+Description=End 24h announce monitoring run
+
+[Timer]
+OnActiveSec=24h
+AccuracySec=1min
+Unit=zasya-announce-monitor-stop.service
+
+[Install]
+WantedBy=timers.target
